@@ -6,6 +6,4 @@ public interface ServerConfiguration {
     String getHost();
 
     String getPort();
-
-    String getTargetFolder();
 }

@@ -1,7 +1,6 @@
 package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.AssetFolderApi;
-import com.kdia.aemupload.config.ServerConfiguration;
 import com.kdia.aemupload.expection.ApiHttpClientException;
 import com.kdia.aemupload.http.ApiHttpClient;
 import com.kdia.aemupload.http.ApiHttpResponse;
@@ -18,7 +17,6 @@ import java.util.Map;
 public class AssetFolderApiImpl implements AssetFolderApi {
 
     private final ApiHttpClient apiHttpClient;
-    private final ServerConfiguration serverConfiguration;
 
     @Override
     public AssetApiResponse<AssetElement> getFolder(final String folder) {
@@ -54,9 +52,7 @@ public class AssetFolderApiImpl implements AssetFolderApi {
     }
 
     private String buildFolderUrl(final String folder) {
-        var normalizedFolder = StringUtils.removeStart(folder, "/");
-        return "/api/assets/"
-                + serverConfiguration.getTargetFolder()
-                + (StringUtils.isEmpty(normalizedFolder) ? "" : "/" + normalizedFolder);
+        var normalizedFolder = StringUtils.removeStart(folder, "/content/dam");
+        return "/api/assets/" + normalizedFolder;
     }
 }

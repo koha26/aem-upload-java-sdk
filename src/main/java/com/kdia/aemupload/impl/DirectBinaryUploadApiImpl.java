@@ -1,10 +1,8 @@
 package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.DirectBinaryUploadApi;
-import com.kdia.aemupload.config.ServerConfiguration;
 import com.kdia.aemupload.expection.ApiHttpClientException;
 import com.kdia.aemupload.http.ApiHttpClient;
-import com.kdia.aemupload.http.ApiHttpEntity;
 import com.kdia.aemupload.http.ApiHttpResponse;
 import com.kdia.aemupload.model.AssetApiResponse;
 import com.kdia.aemupload.options.CompleteUploadRequestOptions;
@@ -16,33 +14,25 @@ import com.kdia.aemupload.options.UploadBinaryResponse;
 import com.kdia.aemupload.utils.FileSplitUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hc.client5.http.utils.URIUtils;
-import org.apache.hc.core5.http.HttpHeaders;
-import org.apache.hc.core5.http.io.entity.FileEntity;
-import org.apache.hc.core5.http.io.entity.InputStreamEntity;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
-
 @Slf4j
 public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
 
     private final ApiHttpClient apiHttpClient;
-    private final ServerConfiguration serverConfiguration;
 
-    public DirectBinaryUploadApiImpl(ApiHttpClient apiHttpClient, ServerConfiguration serverConfiguration) {
+    public DirectBinaryUploadApiImpl(ApiHttpClient apiHttpClient) {
         this.apiHttpClient = apiHttpClient;
-        this.serverConfiguration = serverConfiguration;
     }
 
     @Override
@@ -72,9 +62,9 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
             List<Path> parts = FileSplitUtil.splitFile(request.getBinary(), maxPartSize);
 
             for (int i = 0; i < parts.size(); i++) {
-                byte[] partData = Files.readAllBytes(parts.get(i));
+                InputStream partInputStream = Files.newInputStream(parts.get(i));
                 URI uploadUri = request.getUploadURIs().get(i);
-                uploadPart(uploadUri, request.getContentType(), partData);
+                uploadPart(uploadUri, request.getContentType(), partInputStream);
                 Files.delete(parts.get(i));
                 log.info("Uploaded {} binary part to {}", i, uploadUri);
             }
@@ -111,15 +101,10 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
         }
     }
 
-    private void uploadPart(final URI uploadUrl, final String contentType, final byte[] partData) {
-        var headers = new HashMap<String, String>();
-        headers.put("Content-Type", contentType);
-        //ApiHttpEntity<byte[]> requestUpdate = new ApiHttpEntity<>(partData, headers);
-
-        //InputStreamEntity
-        //FileEntity
+    private void uploadPart(final URI uploadUrl, final String contentType, final InputStream partInputStream) {
+        var headers = Map.of("Content-Type", contentType);
         var decodedUri = decodeUploadBinaryPartUri(uploadUrl);
-        apiHttpClient.put(decodedUri, partData, headers, Void.class);
+        apiHttpClient.put(decodedUri, partInputStream, headers, Void.class);
     }
 
     private String decodeUploadBinaryPartUri(URI uploadUrl) {
@@ -154,8 +139,7 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
     }
 
     private String buildInitiateUploadUrl(final InitiateUploadRequestOptions options) {
-        var normalizedDamAssetFolder = StringUtils.removeStart(options.getDamAssetFolder(), "/");
-        return String.format("/content/dam/%s/%s.initiateUpload.json",
-                serverConfiguration.getTargetFolder(), normalizedDamAssetFolder);
+        var normalizedDamAssetFolder = StringUtils.removeEnd(options.getDamAssetFolder(), "/");
+        return normalizedDamAssetFolder + ".initiateUpload.json";
     }
 }

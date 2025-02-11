@@ -1,7 +1,6 @@
 package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.AssetMetadataApi;
-import com.kdia.aemupload.config.ServerConfiguration;
 import com.kdia.aemupload.expection.ApiHttpClientException;
 import com.kdia.aemupload.http.ApiHttpClient;
 import com.kdia.aemupload.http.ApiHttpResponse;
@@ -9,7 +8,6 @@ import com.kdia.aemupload.model.AssetApiResponse;
 import com.kdia.aemupload.model.DamAsset;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
@@ -18,7 +16,6 @@ import java.util.Map;
 public class AssetMetadataApiImpl implements AssetMetadataApi {
 
     private final ApiHttpClient apiHttpClient;
-    private final ServerConfiguration serverConfiguration;
 
     @Override
     public AssetApiResponse<DamAsset> getAsset(final String fullQualifiedAssetId) {
@@ -40,7 +37,7 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
             Map<Object, Object> properties = Map.of(
                     ":operation", "delete"
             );
-            ApiHttpResponse<Void> response = apiHttpClient.post(buildAssetUrl(fullQualifiedAssetId), properties, Map.of(), Void.class);
+            ApiHttpResponse<Void> response = apiHttpClient.post(fullQualifiedAssetId, properties, Map.of(), Void.class);
             return AssetApiResponse.<Void>builder()
                     .status(response.getStatus())
                     .build();
@@ -51,11 +48,7 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
     }
 
     private String buildAssetMetadataUrl(final String fullQualifiedAssetId) {
-        return String.format("%s/jcr:content.1.json", buildAssetUrl(fullQualifiedAssetId));
+        return fullQualifiedAssetId + "/jcr:content.1.json";
     }
 
-    private String buildAssetUrl(final String fullQualifiedAssetId) {
-        return String.format("/content/dam/%s/%s",
-                serverConfiguration.getTargetFolder(), StringUtils.removeStart(fullQualifiedAssetId, "/"));
-    }
 }

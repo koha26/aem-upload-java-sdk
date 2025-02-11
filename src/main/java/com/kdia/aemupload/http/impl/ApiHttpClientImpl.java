@@ -16,8 +16,14 @@ import org.apache.hc.client5.http.impl.classic.BasicHttpClientResponseHandler;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntityContainer;
+import org.apache.hc.core5.http.HttpHeaders;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class ApiHttpClientImpl implements ApiHttpClient {
@@ -45,7 +51,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
                                        final Class<T> responseType) throws ApiHttpClientException {
         var requestUrl = getRequestUrl(url);
         HttpPost httpPost = new HttpPost(requestUrl);
-        setRequestEntity(httpPost, request);
+        setRequestEntity(httpPost, request, headers);
         headers.forEach(httpPost::setHeader);
         return executeRequest(httpPost, responseType);
     }
@@ -55,7 +61,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
                                       final Class<T> responseType) throws ApiHttpClientException {
         var requestUrl = getRequestUrl(url);
         HttpPut httpPut = new HttpPut(requestUrl);
-        setRequestEntity(httpPut, request);
+        setRequestEntity(httpPut, request, headers);
         headers.forEach(httpPut::setHeader);
         return executeRequest(httpPut, responseType);
     }
@@ -83,19 +89,26 @@ public class ApiHttpClientImpl implements ApiHttpClient {
                 .build();
     }
 
-/*
-    private <T> ApiHttpResponse<T> getApiHttpResponse(final Supplier<ResponseEntity<T>> response) {
-        try {
-            return toApiHttpResponse(response.get());
-        } catch (RestClientResponseException e) {
-            throw new ApiHttpClientException(e.getStatusCode(), e.getStatusText(), e.getResponseBodyAsByteArray());
-        } catch (RestClientException e) {
-            throw new ApiHttpClientException(HttpStatusCode.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value()), e.getMessage());
+    private void setRequestEntity(HttpEntityContainer request, Object body,
+                                  Map<String, String> headers) throws ApiHttpClientException {
+        if (body instanceof InputStream) {
+            request.setEntity(EntityBuilder.create()
+                    .setStream((InputStream) body)
+                    .setContentType(ContentType.create(headers.get(HttpHeaders.CONTENT_TYPE)))
+                    .build());
+            return;
         }
-    }
-*/
-
-    private void setRequestEntity(HttpEntityContainer request, Object body) throws ApiHttpClientException {
+        if (body instanceof Map) {
+            Map<String, String> bodyMap = (Map<String, String>) body;
+            List<NameValuePair> formParams = new ArrayList<>();
+            bodyMap.forEach((key, value) -> {
+                formParams.add(new BasicNameValuePair(key, value));
+            });
+            request.setEntity(EntityBuilder.create()
+                    .setParameters(formParams)
+                    .build());
+            return;
+        }
         try {
             String json = objectMapper.writeValueAsString(body);
             request.setEntity(EntityBuilder.create()

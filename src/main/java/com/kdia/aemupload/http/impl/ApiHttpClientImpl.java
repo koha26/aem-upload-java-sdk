@@ -1,0 +1,132 @@
+package com.kdia.aemupload.http.impl;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kdia.aemupload.config.ServerConfiguration;
+import com.kdia.aemupload.expection.ApiHttpClientException;
+import com.kdia.aemupload.http.ApiHttpClient;
+import com.kdia.aemupload.http.ApiHttpResponse;
+import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpPut;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
+import org.apache.hc.client5.http.entity.EntityBuilder;
+import org.apache.hc.client5.http.impl.classic.BasicHttpClientResponseHandler;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntityContainer;
+
+import java.io.IOException;
+import java.util.Map;
+
+public class ApiHttpClientImpl implements ApiHttpClient {
+
+    private final CloseableHttpClient httpClient;
+    private final ServerConfiguration serverConfiguration;
+    private final ObjectMapper objectMapper;
+
+    public ApiHttpClientImpl(CloseableHttpClient httpClient, ServerConfiguration serverConfiguration,
+                             ObjectMapper objectMapper) {
+        this.httpClient = httpClient;
+        this.serverConfiguration = serverConfiguration;
+        this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public <T> ApiHttpResponse<T> get(final String url, final Class<T> responseType) throws ApiHttpClientException {
+        var requestUrl = getRequestUrl(url);
+        HttpGet request = new HttpGet(requestUrl);
+        return executeRequest(request, responseType);
+    }
+
+    @Override
+    public <T> ApiHttpResponse<T> post(final String url, Object request, Map<String, String> headers,
+                                       final Class<T> responseType) throws ApiHttpClientException {
+        var requestUrl = getRequestUrl(url);
+        HttpPost httpPost = new HttpPost(requestUrl);
+        setRequestEntity(httpPost, request);
+        headers.forEach(httpPost::setHeader);
+        return executeRequest(httpPost, responseType);
+    }
+
+    @Override
+    public <T> ApiHttpResponse<T> put(final String url, Object request, Map<String, String> headers,
+                                      final Class<T> responseType) throws ApiHttpClientException {
+        var requestUrl = getRequestUrl(url);
+        HttpPut httpPut = new HttpPut(requestUrl);
+        setRequestEntity(httpPut, request);
+        headers.forEach(httpPut::setHeader);
+        return executeRequest(httpPut, responseType);
+    }
+
+    private <T> ApiHttpResponse<T> executeRequest(HttpUriRequestBase request, Class<T> responseType) throws ApiHttpClientException {
+        try {
+            Result result = httpClient.execute(request, (response) -> {
+                BasicHttpClientResponseHandler basicHttpClientResponseHandler = new BasicHttpClientResponseHandler();
+                String responseEntity = basicHttpClientResponseHandler.handleResponse(response);
+                return new Result(response.getCode(), responseEntity);
+            });
+            int statusCode = result.getStatus();
+            String responseBody = result.getContent();
+            T body = objectMapper.readValue(responseBody, responseType);
+            return toApiHttpResponse(body, statusCode);
+        } catch (IOException e) {
+            throw new ApiHttpClientException(500, "HTTP request failed: " + request.getMethod() + " " + request.getRequestUri());
+        }
+    }
+
+    private <T> ApiHttpResponse<T> toApiHttpResponse(final T body, final int statusCode) {
+        return ApiHttpResponse.<T>builder()
+                .status(statusCode)
+                .body(body)
+                .build();
+    }
+
+/*
+    private <T> ApiHttpResponse<T> getApiHttpResponse(final Supplier<ResponseEntity<T>> response) {
+        try {
+            return toApiHttpResponse(response.get());
+        } catch (RestClientResponseException e) {
+            throw new ApiHttpClientException(e.getStatusCode(), e.getStatusText(), e.getResponseBodyAsByteArray());
+        } catch (RestClientException e) {
+            throw new ApiHttpClientException(HttpStatusCode.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value()), e.getMessage());
+        }
+    }
+*/
+
+    private void setRequestEntity(HttpEntityContainer request, Object body) throws ApiHttpClientException {
+        try {
+            String json = objectMapper.writeValueAsString(body);
+            request.setEntity(EntityBuilder.create()
+                    .setText(json)
+                    .setContentType(ContentType.APPLICATION_JSON)
+                    .build());
+        } catch (Exception e) {
+            throw new ApiHttpClientException(500, "Failed to serialize request body");
+        }
+    }
+
+    String getRequestUrl(final String url) {
+        var hostUrl = getHostUrl();
+        return StringUtils.startsWith(url, "/") ? hostUrl + url : url;
+    }
+
+    String getHostUrl() {
+        return serverConfiguration.getSchema() + "://" + serverConfiguration.getHost()
+                + (StringUtils.isEmpty(serverConfiguration.getPort()) ? "" : ":" + serverConfiguration.getPort());
+    }
+
+    @Getter
+    static class Result {
+
+        final int status;
+        final String content;
+
+        Result(final int status, final String content) {
+            this.status = status;
+            this.content = content;
+        }
+
+    }
+}

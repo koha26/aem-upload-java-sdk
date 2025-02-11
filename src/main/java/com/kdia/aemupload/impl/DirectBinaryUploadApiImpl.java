@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 @Slf4j
@@ -44,13 +45,10 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
             ApiHttpResponse<InitiateUploadResponse> responseEntity =
                     apiHttpClient.post(initiateUploadUrl, formData, headers, InitiateUploadResponse.class);
 
-            return AssetApiResponse.<InitiateUploadResponse>builder()
-                    .status(responseEntity.getStatus())
-                    .body(responseEntity.getBody())
-                    .build();
+            return AssetApiResponse.success(responseEntity.getBody());
         } catch (ApiHttpClientException e) {
             log.error("Failed to initiate upload of {} to {}", request.getFileName(), request.getDamAssetFolder(), e);
-            return AssetApiResponse.<InitiateUploadResponse>builder().status(e.getStatusCode()).build();
+            return AssetApiResponse.fail(e.getErrorMessage());
         }
     }
 
@@ -68,18 +66,13 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
                 Files.delete(parts.get(i));
                 log.info("Uploaded {} binary part to {}", i, uploadUri);
             }
-            return AssetApiResponse.<UploadBinaryResponse>builder()
-                    .status(200)
-                    .body(new UploadBinaryResponse(parts.size()))
-                    .build();
+            return AssetApiResponse.success(new UploadBinaryResponse(parts.size()));
         } catch (ApiHttpClientException e) {
             log.error("Failed to upload binary", e);
-            return AssetApiResponse.<UploadBinaryResponse>builder().status(e.getStatusCode()).build();
+            return AssetApiResponse.fail(e.getErrorMessage());
         } catch (Exception e) {
             log.error("Failed to handle binary part", e);
-            return AssetApiResponse.<UploadBinaryResponse>builder()
-                    .status(500)
-                    .build();
+            return AssetApiResponse.fail("Failed to handle binary part");
         }
     }
 
@@ -91,13 +84,10 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
             ApiHttpResponse<CompleteUploadResponse> responseEntity =
                     apiHttpClient.post(request.getCompleteUri(), formData, headers, CompleteUploadResponse.class);
 
-            return AssetApiResponse.<CompleteUploadResponse>builder()
-                    .status(responseEntity.getStatus())
-                    .body(responseEntity.getBody())
-                    .build();
+            return AssetApiResponse.success(responseEntity.getBody());
         } catch (ApiHttpClientException e) {
             log.error("Failed to complete upload {}", request.getFileName(), e);
-            return AssetApiResponse.<CompleteUploadResponse>builder().status(e.getStatusCode()).build();
+            return AssetApiResponse.fail(e.getErrorMessage());
         }
     }
 
@@ -125,10 +115,8 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
     }
 
     private void addIfPresent(Map<String, String> formParams, String key, Supplier<Object> valueSupplier) {
-        Object value = valueSupplier.get();
-        if (value != null) {
-            formParams.put(key, String.valueOf(value));
-        }
+        Optional.ofNullable(valueSupplier.get())
+                .ifPresent(value -> formParams.put(key, String.valueOf(value)));
     }
 
     private Map<String, String> toInitiateUploadFormData(final InitiateUploadRequestOptions options) {

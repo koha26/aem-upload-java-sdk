@@ -1,14 +1,22 @@
 package com.kdia.aemupload.model;
 
-import com.kdia.aemupload.http.ApiHttpResponse;
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
 @SuperBuilder
-public class AssetApiResponse<T> extends ApiHttpResponse<T> {
+@AllArgsConstructor
+public class AssetApiResponse<T> {
+    private boolean success;
+    private T body;
+    private String errorMessage;
+
+    public static <T> AssetApiResponse<T> success(T body) {
+        return new AssetApiResponse<>(true, body, null);
+    }
+
+    public static <T> AssetApiResponse<T> fail(String errorMessage) {
+        return new AssetApiResponse<>(false, null, errorMessage);
+    }
 }

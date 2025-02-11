@@ -33,4 +33,8 @@ public class ApiHttpClientException extends RuntimeException {
         }
         return new String(responseBody, StandardCharsets.UTF_8);
     }
+
+    public String getErrorMessage() {
+        return "HTTP status: " + statusCode + ". " + statusText;
+    }
 }

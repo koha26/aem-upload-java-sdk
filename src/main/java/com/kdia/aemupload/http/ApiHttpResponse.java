@@ -12,5 +12,5 @@ import lombok.experimental.SuperBuilder;
 public class ApiHttpResponse<T> {
     private int status;
     private T body;
-    private String errorsMessage;
+    private String errorMessage;
 }

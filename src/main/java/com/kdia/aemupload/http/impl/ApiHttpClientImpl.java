@@ -6,6 +6,7 @@ import com.kdia.aemupload.expection.ApiHttpClientException;
 import com.kdia.aemupload.http.ApiHttpClient;
 import com.kdia.aemupload.http.ApiHttpResponse;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
@@ -17,6 +18,7 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntityContainer;
 import org.apache.hc.core5.http.HttpHeaders;
+import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.NameValuePair;
 import org.apache.hc.core5.http.message.BasicNameValuePair;
 
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 public class ApiHttpClientImpl implements ApiHttpClient {
 
     private final CloseableHttpClient httpClient;
@@ -68,6 +71,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     private <T> ApiHttpResponse<T> executeRequest(HttpUriRequestBase request, Class<T> responseType) throws ApiHttpClientException {
         try {
+            //TODO: replace with custom response handler to improve error handling
             Result result = httpClient.execute(request, (response) -> {
                 BasicHttpClientResponseHandler basicHttpClientResponseHandler = new BasicHttpClientResponseHandler();
                 String responseEntity = basicHttpClientResponseHandler.handleResponse(response);
@@ -78,7 +82,9 @@ public class ApiHttpClientImpl implements ApiHttpClient {
             T body = objectMapper.readValue(responseBody, responseType);
             return toApiHttpResponse(body, statusCode);
         } catch (IOException e) {
-            throw new ApiHttpClientException(500, "HTTP request failed: " + request.getMethod() + " " + request.getRequestUri());
+            log.debug("Error while executing request", e);
+            throw new ApiHttpClientException(HttpStatus.SC_INTERNAL_SERVER_ERROR,
+                    "Error while executing request: " + request.getMethod() + " " + request.getRequestUri());
         }
     }
 
@@ -116,6 +122,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
                     .setContentType(ContentType.APPLICATION_JSON)
                     .build());
         } catch (Exception e) {
+            log.debug("Failed to serialize request body", e);
             throw new ApiHttpClientException(500, "Failed to serialize request body");
         }
     }

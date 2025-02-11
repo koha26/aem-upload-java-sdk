@@ -15,5 +15,6 @@ public class ApiAccessTokenProperties {
     String id;
     String org;
     String privateKeyFilePath;
+    String privateKeyContent;
     int tokenLifeTimeInSec;
 }

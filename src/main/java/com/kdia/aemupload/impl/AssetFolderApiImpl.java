@@ -22,14 +22,11 @@ public class AssetFolderApiImpl implements AssetFolderApi {
     public AssetApiResponse<AssetElement> getFolder(final String folder) {
         try {
             ApiHttpResponse<AssetElement> response = apiHttpClient.get(buildFolderUrl(folder), AssetElement.class);
-            return AssetApiResponse.<AssetElement>builder()
-                    .status(response.getStatus())
-                    .body(response.getBody())
-                    .build();
+            return AssetApiResponse.success(response.getBody());
         } catch (ApiHttpClientException e) {
             log.error("Failed to get folder {}. Response: {} {}", folder, e.getStatusCode(),
                     e.getResponseBodyAsString());
-            return AssetApiResponse.<AssetElement>builder().status(e.getStatusCode()).build();
+            return AssetApiResponse.fail(e.getErrorMessage());
         }
     }
 
@@ -42,12 +39,10 @@ public class AssetFolderApiImpl implements AssetFolderApi {
                     "properties", Map.of("title", title)
             );
             ApiHttpResponse<Void> response = apiHttpClient.post(buildFolderUrl(folder), properties, Map.of(), Void.class);
-            return AssetApiResponse.<Void>builder()
-                    .status(response.getStatus())
-                    .build();
+            return AssetApiResponse.success(response.getBody());
         } catch (ApiHttpClientException e) {
             log.error("Failed to create folder {}. Response: {} {}", folder, e.getStatusCode(), e.getStatusText());
-            return AssetApiResponse.<Void>builder().status(e.getStatusCode()).build();
+            return AssetApiResponse.fail(e.getErrorMessage());
         }
     }
 

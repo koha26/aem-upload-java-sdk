@@ -13,7 +13,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.EntityBuilder;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,9 +30,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -93,14 +101,15 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
 
     RSAPrivateKey getRsaPrivateKey() {
         try {
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            Path privateKeyPath = Paths.get(apiAccessTokenProperties.getPrivateKeyFilePath());
-            String privateKeyContent = String.join("", Files.readAllLines(privateKeyPath));
+            String privateKeyContent = StringUtils.isNoneEmpty(apiAccessTokenProperties.getPrivateKeyContent())
+                    ? apiAccessTokenProperties.getPrivateKeyContent()
+                    : getPrivateKeyContentFromFile();
             String privateKeyContentNormalized = privateKeyContent
                     .replaceFirst("-----BEGIN PRIVATE KEY-----", "")
                     .replace("-----END PRIVATE KEY-----", "");
             byte[] decode = Base64.getDecoder().decode(privateKeyContentNormalized);
             PKCS8EncodedKeySpec keySpecPv = new PKCS8EncodedKeySpec(decode, "RSA");
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             return (RSAPrivateKey) keyFactory.generatePrivate(keySpecPv);
         } catch (NoSuchAlgorithmException e) {
             log.error("No RSA algorithm", e);
@@ -110,6 +119,11 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             log.error("Invalid key spec {}", apiAccessTokenProperties.getPrivateKeyFilePath(), e);
         }
         return null;
+    }
+
+    private String getPrivateKeyContentFromFile() throws IOException {
+        Path privateKeyPath = Paths.get(apiAccessTokenProperties.getPrivateKeyFilePath());
+        return String.join("", Files.readAllLines(privateKeyPath));
     }
 
     private boolean isTokenNotExpired() {

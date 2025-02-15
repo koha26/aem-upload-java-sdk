@@ -4,8 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kdia.aemupload.config.ServerConfiguration;
 import com.kdia.aemupload.expection.ApiHttpClientException;
 import com.kdia.aemupload.http.ApiHttpClient;
+import com.kdia.aemupload.http.ApiHttpClientResponseHandlerFactory;
+import com.kdia.aemupload.http.ApiHttpEntity;
 import com.kdia.aemupload.http.ApiHttpResponse;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -13,7 +14,6 @@ import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.classic.methods.HttpPut;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
 import org.apache.hc.client5.http.entity.EntityBuilder;
-import org.apache.hc.client5.http.impl.classic.BasicHttpClientResponseHandler;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntityContainer;
@@ -34,12 +34,18 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     private final CloseableHttpClient httpClient;
     private final ServerConfiguration serverConfiguration;
     private final ObjectMapper objectMapper;
+    private final ApiHttpClientResponseHandlerFactory responseHandlerFactory;
+
+    public ApiHttpClientImpl(CloseableHttpClient httpClient, ServerConfiguration serverConfiguration) {
+        this(httpClient, serverConfiguration, new ObjectMapper(), new ApiHttpClientResponseHandlerFactoryImpl());
+    }
 
     public ApiHttpClientImpl(CloseableHttpClient httpClient, ServerConfiguration serverConfiguration,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper, ApiHttpClientResponseHandlerFactory responseHandlerFactory) {
         this.httpClient = httpClient;
         this.serverConfiguration = serverConfiguration;
         this.objectMapper = objectMapper;
+        this.responseHandlerFactory = responseHandlerFactory;
     }
 
     @Override
@@ -50,57 +56,59 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     }
 
     @Override
-    public <T> ApiHttpResponse<T> post(final String url, Object request, Map<String, String> headers,
-                                       final Class<T> responseType) throws ApiHttpClientException {
-        var requestUrl = getRequestUrl(url);
-        HttpPost httpPost = new HttpPost(requestUrl);
-        setRequestEntity(httpPost, request, headers);
-        headers.forEach(httpPost::setHeader);
-        return executeRequest(httpPost, responseType);
-    }
-
-    @Override
-    public <T> ApiHttpResponse<T> put(final String url, Object request, Map<String, String> headers,
-                                      final Class<T> responseType) throws ApiHttpClientException {
-        var requestUrl = getRequestUrl(url);
-        HttpPut httpPut = new HttpPut(requestUrl);
-        setRequestEntity(httpPut, request, headers);
-        headers.forEach(httpPut::setHeader);
-        return executeRequest(httpPut, responseType);
-    }
-
-    private <T> ApiHttpResponse<T> executeRequest(HttpUriRequestBase request, Class<T> responseType) throws ApiHttpClientException {
+    public <E, R> ApiHttpResponse<R> post(final String url, ApiHttpEntity<E> entity,
+                                          final Class<R> responseType) throws ApiHttpClientException {
         try {
-            //TODO: replace with custom response handler to improve error handling
-            Result result = httpClient.execute(request, (response) -> {
-                BasicHttpClientResponseHandler basicHttpClientResponseHandler = new BasicHttpClientResponseHandler();
-                String responseEntity = basicHttpClientResponseHandler.handleResponse(response);
-                return new Result(response.getCode(), responseEntity);
-            });
-            int statusCode = result.getStatus();
-            String responseBody = result.getContent();
-            T body = objectMapper.readValue(responseBody, responseType);
-            return toApiHttpResponse(body, statusCode);
-        } catch (IOException e) {
-            log.debug("Error while executing request", e);
-            throw new ApiHttpClientException(HttpStatus.SC_INTERNAL_SERVER_ERROR,
-                    "Error while executing request: " + request.getMethod() + " " + request.getRequestUri());
+            var requestUrl = getRequestUrl(url);
+            HttpPost httpPost = new HttpPost(requestUrl);
+            setRequestEntity(httpPost, entity);
+            entity.getHeaders().forEach(httpPost::setHeader);
+            return executeRequest(httpPost, responseType);
+        } catch (Exception e) {
+            return ApiHttpResponse.<R>builder()
+                    .status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                    .errorMessage("Error while executing request: " + url)
+                    .build();
         }
     }
 
-    private <T> ApiHttpResponse<T> toApiHttpResponse(final T body, final int statusCode) {
-        return ApiHttpResponse.<T>builder()
-                .status(statusCode)
-                .body(body)
-                .build();
+    @Override
+    public <E, R> ApiHttpResponse<R> put(final String url, ApiHttpEntity<E> entity,
+                                         final Class<R> responseType) throws ApiHttpClientException {
+        try {
+            var requestUrl = getRequestUrl(url);
+            HttpPut httpPut = new HttpPut(requestUrl);
+            setRequestEntity(httpPut, entity);
+            entity.getHeaders().forEach(httpPut::setHeader);
+            return executeRequest(httpPut, responseType);
+        } catch (Exception e) {
+            return ApiHttpResponse.<R>builder()
+                    .status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                    .errorMessage("Error while executing request: " + url)
+                    .build();
+        }
     }
 
-    private void setRequestEntity(HttpEntityContainer request, Object body,
-                                  Map<String, String> headers) throws ApiHttpClientException {
+    private <T> ApiHttpResponse<T> executeRequest(final HttpUriRequestBase request,
+                                                  final Class<T> responseType) throws ApiHttpClientException {
+        try {
+            return httpClient.execute(request, responseHandlerFactory.createHandler(responseType));
+        } catch (IOException e) {
+            log.debug("Error while executing request", e);
+            return ApiHttpResponse.<T>builder()
+                    .status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                    .errorMessage("Error while executing request: " + request.getMethod() + " " + request.getRequestUri())
+                    .build();
+        }
+    }
+
+    private <T> void setRequestEntity(final HttpEntityContainer request,
+                                      final ApiHttpEntity<T> entity) throws ApiHttpClientException {
+        T body = entity.getBody();
         if (body instanceof InputStream) {
             request.setEntity(EntityBuilder.create()
                     .setStream((InputStream) body)
-                    .setContentType(ContentType.create(headers.get(HttpHeaders.CONTENT_TYPE)))
+                    .setContentType(ContentType.create(entity.getHeaders().get(HttpHeaders.CONTENT_TYPE)))
                     .build());
             return;
         }
@@ -123,30 +131,17 @@ public class ApiHttpClientImpl implements ApiHttpClient {
                     .build());
         } catch (Exception e) {
             log.debug("Failed to serialize request body", e);
-            throw new ApiHttpClientException(500, "Failed to serialize request body");
+            throw new RuntimeException("Failed to serialize request body", e);
         }
     }
 
-    String getRequestUrl(final String url) {
+    private String getRequestUrl(final String url) {
         var hostUrl = getHostUrl();
         return StringUtils.startsWith(url, "/") ? hostUrl + url : url;
     }
 
-    String getHostUrl() {
+    private String getHostUrl() {
         return serverConfiguration.getSchema() + "://" + serverConfiguration.getHost()
                 + (StringUtils.isEmpty(serverConfiguration.getPort()) ? "" : ":" + serverConfiguration.getPort());
-    }
-
-    @Getter
-    static class Result {
-
-        final int status;
-        final String content;
-
-        Result(final int status, final String content) {
-            this.status = status;
-            this.content = content;
-        }
-
     }
 }

@@ -1,11 +1,12 @@
-package com.kdia.aemupload.config;
+package com.kdia.aemupload.config.data;
 
+import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
 import lombok.Value;
 
 import java.util.List;
 
 @Value
-public class ApiAccessTokenProperties {
+public class ApiAccessTokenProperties implements ApiAccessTokenConfiguration {
     String localDevelopmentAccessToken;
     String imsEndpoint;
     List<String> metaScopes;

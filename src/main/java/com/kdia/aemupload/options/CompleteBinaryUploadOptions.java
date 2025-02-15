@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class CompleteUploadRequestOptions {
+public class CompleteBinaryUploadOptions {
     private String completeUri;
     private String fileName;
     private String mimeType;

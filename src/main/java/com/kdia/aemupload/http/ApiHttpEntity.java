@@ -16,5 +16,5 @@ import java.util.Map;
 public class ApiHttpEntity<T> {
     private T body;
     @Builder.Default
-    private Map<String, List<String>> headers = new LinkedHashMap<>();
+    private Map<String, String> headers = new LinkedHashMap<>();
 }

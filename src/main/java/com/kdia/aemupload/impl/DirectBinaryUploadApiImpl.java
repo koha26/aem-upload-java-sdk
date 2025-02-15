@@ -1,15 +1,15 @@
 package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.DirectBinaryUploadApi;
-import com.kdia.aemupload.expection.ApiHttpClientException;
 import com.kdia.aemupload.http.ApiHttpClient;
+import com.kdia.aemupload.http.ApiHttpEntity;
 import com.kdia.aemupload.http.ApiHttpResponse;
 import com.kdia.aemupload.model.AssetApiResponse;
-import com.kdia.aemupload.options.CompleteUploadRequestOptions;
+import com.kdia.aemupload.options.CompleteBinaryUploadOptions;
 import com.kdia.aemupload.options.CompleteUploadResponse;
-import com.kdia.aemupload.options.InitiateUploadRequestOptions;
+import com.kdia.aemupload.options.InitiateBinaryUploadOptions;
 import com.kdia.aemupload.options.InitiateUploadResponse;
-import com.kdia.aemupload.options.UploadBinaryRequestOptions;
+import com.kdia.aemupload.options.UploadBinaryOptions;
 import com.kdia.aemupload.options.UploadBinaryResponse;
 import com.kdia.aemupload.utils.FileSplitUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -37,23 +37,25 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
     }
 
     @Override
-    public AssetApiResponse<InitiateUploadResponse> initiateUpload(final InitiateUploadRequestOptions request) {
+    public AssetApiResponse<InitiateUploadResponse> initiateUpload(final InitiateBinaryUploadOptions request) {
         try {
-            var formData = toInitiateUploadFormData(request);
             var initiateUploadUrl = buildInitiateUploadUrl(request);
-            var headers = Map.of("Content-Type", "application/x-www-form-urlencoded");
+            var httpEntity = ApiHttpEntity.builder()
+                    .body(toInitiateUploadFormData(request))
+                    .headers(Map.of("Content-Type", "application/x-www-form-urlencoded"))
+                    .build();
             ApiHttpResponse<InitiateUploadResponse> responseEntity =
-                    apiHttpClient.post(initiateUploadUrl, formData, headers, InitiateUploadResponse.class);
+                    apiHttpClient.post(initiateUploadUrl, httpEntity, InitiateUploadResponse.class);
 
-            return AssetApiResponse.success(responseEntity.getBody());
-        } catch (ApiHttpClientException e) {
+            return AssetApiResponse.map(responseEntity);
+        } catch (Exception e) {
             log.error("Failed to initiate upload of {} to {}", request.getFileName(), request.getDamAssetFolder(), e);
-            return AssetApiResponse.fail(e.getErrorMessage());
+            return AssetApiResponse.fail(e.getMessage());
         }
     }
 
     @Override
-    public AssetApiResponse<UploadBinaryResponse> uploadBinary(final UploadBinaryRequestOptions request) {
+    public AssetApiResponse<UploadBinaryResponse> uploadBinary(final UploadBinaryOptions request) {
         try {
             var maxPartSize = request.getMaxPartSize();
 
@@ -67,41 +69,43 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
                 log.info("Uploaded {} binary part to {}", i, uploadUri);
             }
             return AssetApiResponse.success(new UploadBinaryResponse(parts.size()));
-        } catch (ApiHttpClientException e) {
-            log.error("Failed to upload binary", e);
-            return AssetApiResponse.fail(e.getErrorMessage());
         } catch (Exception e) {
-            log.error("Failed to handle binary part", e);
-            return AssetApiResponse.fail("Failed to handle binary part");
+            log.error("Failed to upload binary", e);
+            return AssetApiResponse.fail(e.getMessage());
         }
     }
 
     @Override
-    public AssetApiResponse<CompleteUploadResponse> completeUpload(final CompleteUploadRequestOptions request) {
+    public AssetApiResponse<CompleteUploadResponse> completeUpload(final CompleteBinaryUploadOptions request) {
         try {
-            var formData = toCompleteUploadFormData(request);
-            var headers = Map.of("Content-Type", "application/x-www-form-urlencoded");
+            var httpEntity = ApiHttpEntity.builder()
+                    .body(toCompleteUploadFormData(request))
+                    .headers(Map.of("Content-Type", "application/x-www-form-urlencoded"))
+                    .build();
             ApiHttpResponse<CompleteUploadResponse> responseEntity =
-                    apiHttpClient.post(request.getCompleteUri(), formData, headers, CompleteUploadResponse.class);
+                    apiHttpClient.post(request.getCompleteUri(), httpEntity, CompleteUploadResponse.class);
 
-            return AssetApiResponse.success(responseEntity.getBody());
-        } catch (ApiHttpClientException e) {
+            return AssetApiResponse.map(responseEntity);
+        } catch (Exception e) {
             log.error("Failed to complete upload {}", request.getFileName(), e);
-            return AssetApiResponse.fail(e.getErrorMessage());
+            return AssetApiResponse.fail(e.getMessage());
         }
     }
 
     private void uploadPart(final URI uploadUrl, final String contentType, final InputStream partInputStream) {
-        var headers = Map.of("Content-Type", contentType);
         var decodedUri = decodeUploadBinaryPartUri(uploadUrl);
-        apiHttpClient.put(decodedUri, partInputStream, headers, Void.class);
+        var httpEntity = ApiHttpEntity.builder()
+                .body(partInputStream)
+                .headers(Map.of("Content-Type", contentType))
+                .build();
+        apiHttpClient.put(decodedUri, httpEntity, Void.class);
     }
 
-    private String decodeUploadBinaryPartUri(URI uploadUrl) {
+    private String decodeUploadBinaryPartUri(final URI uploadUrl) {
         return URLDecoder.decode(uploadUrl.toString(), StandardCharsets.UTF_8);
     }
 
-    private Map<String, String> toCompleteUploadFormData(final CompleteUploadRequestOptions request) {
+    private Map<String, String> toCompleteUploadFormData(final CompleteBinaryUploadOptions request) {
         var formParams = new LinkedHashMap<String, String>();
         formParams.put("fileName", request.getFileName());
         formParams.put("mimeType", request.getMimeType());
@@ -114,19 +118,20 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
         return formParams;
     }
 
-    private void addIfPresent(Map<String, String> formParams, String key, Supplier<Object> valueSupplier) {
+    private void addIfPresent(final Map<String, String> formParams,
+                              final String key, final Supplier<Object> valueSupplier) {
         Optional.ofNullable(valueSupplier.get())
                 .ifPresent(value -> formParams.put(key, String.valueOf(value)));
     }
 
-    private Map<String, String> toInitiateUploadFormData(final InitiateUploadRequestOptions options) {
+    private Map<String, String> toInitiateUploadFormData(final InitiateBinaryUploadOptions options) {
         return Map.of(
                 "fileName", options.getFileName(),
                 "fileSize", String.valueOf(options.getFileSize())
         );
     }
 
-    private String buildInitiateUploadUrl(final InitiateUploadRequestOptions options) {
+    private String buildInitiateUploadUrl(final InitiateBinaryUploadOptions options) {
         var normalizedDamAssetFolder = StringUtils.removeEnd(options.getDamAssetFolder(), "/");
         return normalizedDamAssetFolder + ".initiateUpload.json";
     }

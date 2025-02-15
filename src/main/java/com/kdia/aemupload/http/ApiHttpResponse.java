@@ -13,4 +13,8 @@ public class ApiHttpResponse<T> {
     private int status;
     private T body;
     private String errorMessage;
+
+    public boolean isSuccess() {
+        return status >= 200 && status < 300;
+    }
 }

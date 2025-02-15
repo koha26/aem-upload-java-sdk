@@ -12,7 +12,7 @@ import java.util.List;
 @Data
 @Builder
 @ToString
-public class UploadBinaryRequestOptions {
+public class UploadBinaryOptions {
     private Path binary;
     @Builder.Default
     private List<URI> uploadURIs = new ArrayList<>();

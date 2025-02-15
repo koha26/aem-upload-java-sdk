@@ -1,8 +1,8 @@
 package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.AssetFolderApi;
-import com.kdia.aemupload.expection.ApiHttpClientException;
 import com.kdia.aemupload.http.ApiHttpClient;
+import com.kdia.aemupload.http.ApiHttpEntity;
 import com.kdia.aemupload.http.ApiHttpResponse;
 import com.kdia.aemupload.model.AssetApiResponse;
 import com.kdia.aemupload.model.AssetElement;
@@ -20,34 +20,26 @@ public class AssetFolderApiImpl implements AssetFolderApi {
 
     @Override
     public AssetApiResponse<AssetElement> getFolder(final String folder) {
-        try {
-            ApiHttpResponse<AssetElement> response = apiHttpClient.get(buildFolderUrl(folder), AssetElement.class);
-            return AssetApiResponse.success(response.getBody());
-        } catch (ApiHttpClientException e) {
-            log.error("Failed to get folder {}. Response: {} {}", folder, e.getStatusCode(),
-                    e.getResponseBodyAsString());
-            return AssetApiResponse.fail(e.getErrorMessage());
-        }
+        ApiHttpResponse<AssetElement> response = apiHttpClient.get(buildFolderUrl(folder), AssetElement.class);
+        return AssetApiResponse.map(response);
     }
 
     @Override
     public AssetApiResponse<Void> createFolder(final String folder) {
-        try {
-            var title = folder.contains("/") ? StringUtils.substringAfterLast(folder, "/") : folder;
-            var properties = Map.of(
-                    "class", "assetFolder",
-                    "properties", Map.of("title", title)
-            );
-            ApiHttpResponse<Void> response = apiHttpClient.post(buildFolderUrl(folder), properties, Map.of(), Void.class);
-            return AssetApiResponse.success(response.getBody());
-        } catch (ApiHttpClientException e) {
-            log.error("Failed to create folder {}. Response: {} {}", folder, e.getStatusCode(), e.getStatusText());
-            return AssetApiResponse.fail(e.getErrorMessage());
-        }
+        var title = folder.contains("/") ? StringUtils.substringAfterLast(folder, "/") : folder;
+        var properties = Map.of(
+                "class", "assetFolder",
+                "properties", Map.of("title", title)
+        );
+        var httpEntity = ApiHttpEntity.builder().body(properties).build();
+        ApiHttpResponse<Void> response = apiHttpClient.post(buildFolderUrl(folder), httpEntity, Void.class);
+        return AssetApiResponse.map(response);
     }
 
     private String buildFolderUrl(final String folder) {
         var normalizedFolder = StringUtils.removeStart(folder, "/content/dam");
         return "/api/assets/" + normalizedFolder;
     }
+
+
 }

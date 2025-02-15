@@ -7,7 +7,7 @@ import java.util.Map;
 public interface ApiHttpClient {
     <T> ApiHttpResponse<T> get(String url, Class<T> responseType) throws ApiHttpClientException;
 
-    <T> ApiHttpResponse<T> post(String url, Object request, Map<String, String> headers, Class<T> responseType) throws ApiHttpClientException;
+    <E, R> ApiHttpResponse<R> post(String url, ApiHttpEntity<E> entity, Class<R> responseType) throws ApiHttpClientException;
 
-    <T> ApiHttpResponse<T> put(String url, Object request, Map<String, String> headers, Class<T> responseType) throws ApiHttpClientException;
+    <E, R> ApiHttpResponse<R> put(String url, ApiHttpEntity<E> entity, Class<R> responseType) throws ApiHttpClientException;
 }

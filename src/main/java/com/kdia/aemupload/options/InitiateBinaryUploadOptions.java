@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class InitiateUploadRequestOptions {
+public class InitiateBinaryUploadOptions {
     private String damAssetFolder;
     private String fileName;
     private long fileSize;

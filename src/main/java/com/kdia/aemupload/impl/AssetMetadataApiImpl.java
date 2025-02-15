@@ -1,8 +1,8 @@
 package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.AssetMetadataApi;
-import com.kdia.aemupload.expection.ApiHttpClientException;
 import com.kdia.aemupload.http.ApiHttpClient;
+import com.kdia.aemupload.http.ApiHttpEntity;
 import com.kdia.aemupload.http.ApiHttpResponse;
 import com.kdia.aemupload.model.AssetApiResponse;
 import com.kdia.aemupload.model.DamAsset;
@@ -19,27 +19,16 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
 
     @Override
     public AssetApiResponse<DamAsset> getAsset(final String fullQualifiedAssetId) {
-        try {
-            ApiHttpResponse<DamAsset> response = apiHttpClient.get(buildAssetMetadataUrl(fullQualifiedAssetId), DamAsset.class);
-            return AssetApiResponse.success(response.getBody());
-        } catch (ApiHttpClientException e) {
-            log.error("Failed to get asset metadata {}. Status: {} {}", fullQualifiedAssetId, e.getStatusCode(), e.getStatusText());
-            return AssetApiResponse.fail(e.getErrorMessage());
-        }
+        ApiHttpResponse<DamAsset> response = apiHttpClient.get(buildAssetMetadataUrl(fullQualifiedAssetId), DamAsset.class);
+        return AssetApiResponse.map(response);
     }
 
     @Override
     public AssetApiResponse<Void> deleteAsset(final String fullQualifiedAssetId) {
-        try {
-            Map<Object, Object> properties = Map.of(
-                    ":operation", "delete"
-            );
-            ApiHttpResponse<Void> response = apiHttpClient.post(fullQualifiedAssetId, properties, Map.of(), Void.class);
-            return AssetApiResponse.success(response.getBody());
-        } catch (ApiHttpClientException e) {
-            log.error("Failed to delete asset {}. Status: {} {}", fullQualifiedAssetId, e.getStatusCode(), e.getStatusText());
-            return AssetApiResponse.fail(e.getErrorMessage());
-        }
+        Map<Object, Object> properties = Map.of(":operation", "delete");
+        var httpEntity = ApiHttpEntity.builder().body(properties).build();
+        ApiHttpResponse<Void> response = apiHttpClient.post(fullQualifiedAssetId, httpEntity, Void.class);
+        return AssetApiResponse.map(response);
     }
 
     private String buildAssetMetadataUrl(final String fullQualifiedAssetId) {

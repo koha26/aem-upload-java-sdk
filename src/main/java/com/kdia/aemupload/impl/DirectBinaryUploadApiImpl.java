@@ -12,6 +12,7 @@ import com.kdia.aemupload.options.InitiateUploadResponse;
 import com.kdia.aemupload.options.UploadBinaryOptions;
 import com.kdia.aemupload.options.UploadBinaryResponse;
 import com.kdia.aemupload.utils.FileSplitUtil;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -27,14 +28,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
+import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
+
 @Slf4j
+@AllArgsConstructor
 public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
 
     private final ApiHttpClient apiHttpClient;
-
-    public DirectBinaryUploadApiImpl(ApiHttpClient apiHttpClient) {
-        this.apiHttpClient = apiHttpClient;
-    }
 
     @Override
     public AssetApiResponse<InitiateUploadResponse> initiateUpload(final InitiateBinaryUploadOptions request) {
@@ -42,7 +43,7 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
             var initiateUploadUrl = buildInitiateUploadUrl(request);
             var httpEntity = ApiHttpEntity.builder()
                     .body(toInitiateUploadFormData(request))
-                    .headers(Map.of("Content-Type", "application/x-www-form-urlencoded"))
+                    .headers(Map.of(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString()))
                     .build();
             ApiHttpResponse<InitiateUploadResponse> responseEntity =
                     apiHttpClient.post(initiateUploadUrl, httpEntity, InitiateUploadResponse.class);
@@ -80,7 +81,7 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
         try {
             var httpEntity = ApiHttpEntity.builder()
                     .body(toCompleteUploadFormData(request))
-                    .headers(Map.of("Content-Type", "application/x-www-form-urlencoded"))
+                    .headers(Map.of(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString()))
                     .build();
             ApiHttpResponse<CompleteUploadResponse> responseEntity =
                     apiHttpClient.post(request.getCompleteUri(), httpEntity, CompleteUploadResponse.class);
@@ -96,7 +97,7 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
         var decodedUri = decodeUploadBinaryPartUri(uploadUrl);
         var httpEntity = ApiHttpEntity.builder()
                 .body(partInputStream)
-                .headers(Map.of("Content-Type", contentType))
+                .headers(Map.of(CONTENT_TYPE, contentType))
                 .build();
         apiHttpClient.put(decodedUri, httpEntity, Void.class);
     }
@@ -124,10 +125,10 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
                 .ifPresent(value -> formParams.put(key, String.valueOf(value)));
     }
 
-    private Map<String, String> toInitiateUploadFormData(final InitiateBinaryUploadOptions options) {
+    private Map<String, Object> toInitiateUploadFormData(final InitiateBinaryUploadOptions options) {
         return Map.of(
                 "fileName", options.getFileName(),
-                "fileSize", String.valueOf(options.getFileSize())
+                "fileSize", options.getFileSize()
         );
     }
 

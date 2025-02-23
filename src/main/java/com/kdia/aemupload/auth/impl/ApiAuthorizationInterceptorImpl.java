@@ -17,7 +17,7 @@ public class ApiAuthorizationInterceptorImpl implements ApiAuthorizationIntercep
 
     @Override
     public void process(HttpRequest httpRequest, EntityDetails entityDetails,
-                        HttpContext httpContext) throws HttpException, IOException {
+                        HttpContext httpContext) {
         if (isAuthorizationRequired(httpRequest) && !httpRequest.containsHeader("Authorization")) {
             httpRequest.setHeader("Authorization", "Bearer " + apiAccessTokenProvider.getAccessToken());
         }

@@ -16,7 +16,7 @@ import java.util.Map;
 
 @Slf4j
 @AllArgsConstructor
-public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseHandler<ApiHttpResponse<T>> {
+public class DefaultApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseHandler<ApiHttpResponse<T>> {
 
     private final Class<T> responseType;
     private final ObjectMapper objectMapper;

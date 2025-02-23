@@ -24,9 +24,11 @@ import org.apache.hc.core5.http.message.BasicNameValuePair;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Slf4j
 public class ApiHttpClientImpl implements ApiHttpClient {
@@ -37,7 +39,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     private final ApiHttpClientResponseHandlerFactory responseHandlerFactory;
 
     public ApiHttpClientImpl(CloseableHttpClient httpClient, ServerConfiguration serverConfiguration) {
-        this(httpClient, serverConfiguration, new ObjectMapper(), new ApiHttpClientResponseHandlerFactoryImpl());
+        this(httpClient, serverConfiguration, new ObjectMapper(), DefaultApiHttpClientResponseHandlerFactory.INSTANCE);
     }
 
     public ApiHttpClientImpl(CloseableHttpClient httpClient, ServerConfiguration serverConfiguration,
@@ -51,42 +53,32 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     @Override
     public <T> ApiHttpResponse<T> get(final String url, final Class<T> responseType) throws ApiHttpClientException {
         var requestUrl = getRequestUrl(url);
-        HttpGet request = new HttpGet(requestUrl);
+        var request = new HttpGet(requestUrl);
         return executeRequest(request, responseType);
     }
 
     @Override
-    public <E, R> ApiHttpResponse<R> post(final String url, ApiHttpEntity<E> entity,
+    public <E, R> ApiHttpResponse<R> post(final String url, final ApiHttpEntity<E> entity,
                                           final Class<R> responseType) throws ApiHttpClientException {
-        try {
+        return safeExecute(() -> {
             var requestUrl = getRequestUrl(url);
-            HttpPost httpPost = new HttpPost(requestUrl);
+            var httpPost = new HttpPost(requestUrl);
             setRequestEntity(httpPost, entity);
-            entity.getHeaders().forEach(httpPost::setHeader);
+            setHeaders(httpPost, entity);
             return executeRequest(httpPost, responseType);
-        } catch (Exception e) {
-            return ApiHttpResponse.<R>builder()
-                    .status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
-                    .errorMessage("Error while executing request: " + url)
-                    .build();
-        }
+        });
     }
 
     @Override
-    public <E, R> ApiHttpResponse<R> put(final String url, ApiHttpEntity<E> entity,
+    public <E, R> ApiHttpResponse<R> put(final String url, final ApiHttpEntity<E> entity,
                                          final Class<R> responseType) throws ApiHttpClientException {
-        try {
+        return safeExecute(() -> {
             var requestUrl = getRequestUrl(url);
-            HttpPut httpPut = new HttpPut(requestUrl);
+            var httpPut = new HttpPut(requestUrl);
             setRequestEntity(httpPut, entity);
-            entity.getHeaders().forEach(httpPut::setHeader);
+            setHeaders(httpPut, entity);
             return executeRequest(httpPut, responseType);
-        } catch (Exception e) {
-            return ApiHttpResponse.<R>builder()
-                    .status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
-                    .errorMessage("Error while executing request: " + url)
-                    .build();
-        }
+        });
     }
 
     private <T> ApiHttpResponse<T> executeRequest(final HttpUriRequestBase request,
@@ -113,10 +105,10 @@ public class ApiHttpClientImpl implements ApiHttpClient {
             return;
         }
         if (body instanceof Map) {
-            Map<String, String> bodyMap = (Map<String, String>) body;
+            Map<String, Object> bodyMap = (Map<String, Object>) body;
             List<NameValuePair> formParams = new ArrayList<>();
             bodyMap.forEach((key, value) -> {
-                formParams.add(new BasicNameValuePair(key, value));
+                formParams.add(new BasicNameValuePair(key, String.valueOf(value)));
             });
             request.setEntity(EntityBuilder.create()
                     .setParameters(formParams)
@@ -129,10 +121,25 @@ public class ApiHttpClientImpl implements ApiHttpClient {
                     .setText(json)
                     .setContentType(ContentType.APPLICATION_JSON)
                     .build());
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.debug("Failed to serialize request body", e);
-            throw new RuntimeException("Failed to serialize request body", e);
+            throw new UncheckedIOException("Failed to serialize request body", e);
         }
+    }
+
+    private <R> ApiHttpResponse<R> safeExecute(final Supplier<ApiHttpResponse<R>> request) {
+        try {
+            return request.get();
+        } catch (Exception e) {
+            return ApiHttpResponse.<R>builder()
+                    .status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                    .errorMessage("Error while executing request")
+                    .build();
+        }
+    }
+
+    private <E> void setHeaders(final HttpUriRequestBase httpRequest, final ApiHttpEntity<E> entity) {
+        entity.getHeaders().forEach(httpRequest::setHeader);
     }
 
     private String getRequestUrl(final String url) {
@@ -144,4 +151,5 @@ public class ApiHttpClientImpl implements ApiHttpClient {
         return serverConfiguration.getSchema() + "://" + serverConfiguration.getHost()
                 + (StringUtils.isEmpty(serverConfiguration.getPort()) ? "" : ":" + serverConfiguration.getPort());
     }
+
 }

@@ -1,7 +1,7 @@
 package com.kdia.aemupload.http;
 
-import com.kdia.aemupload.http.impl.ApiHttpClientResponseHandler;
+import com.kdia.aemupload.http.impl.DefaultApiHttpClientResponseHandler;
 
 public interface ApiHttpClientResponseHandlerFactory {
-    <T> ApiHttpClientResponseHandler<T> createHandler(Class<T> responseType);
+    <T> DefaultApiHttpClientResponseHandler<T> createHandler(Class<T> responseType);
 }

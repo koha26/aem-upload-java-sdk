@@ -18,16 +18,16 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
     private final ApiHttpClient apiHttpClient;
 
     @Override
-    public AssetApiResponse<DamAsset> getAsset(final String fullQualifiedAssetId) {
-        ApiHttpResponse<DamAsset> response = apiHttpClient.get(buildAssetMetadataUrl(fullQualifiedAssetId), DamAsset.class);
+    public AssetApiResponse<DamAsset> getAsset(final String assetPath) {
+        ApiHttpResponse<DamAsset> response = apiHttpClient.get(buildAssetMetadataUrl(assetPath), DamAsset.class);
         return AssetApiResponse.map(response);
     }
 
     @Override
-    public AssetApiResponse<Void> deleteAsset(final String fullQualifiedAssetId) {
-        Map<Object, Object> properties = Map.of(":operation", "delete");
+    public AssetApiResponse<Void> deleteAsset(final String assetPath) {
+        Map<String, Object> properties = Map.of(":operation", "delete");
         var httpEntity = ApiHttpEntity.builder().body(properties).build();
-        ApiHttpResponse<Void> response = apiHttpClient.post(fullQualifiedAssetId, httpEntity, Void.class);
+        ApiHttpResponse<Void> response = apiHttpClient.post(assetPath, httpEntity, Void.class);
         return AssetApiResponse.map(response);
     }
 

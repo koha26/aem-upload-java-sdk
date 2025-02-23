@@ -27,11 +27,22 @@ public class AssetFolderApiImpl implements AssetFolderApi {
     @Override
     public AssetApiResponse<Void> createFolder(final String folder) {
         var title = folder.contains("/") ? StringUtils.substringAfterLast(folder, "/") : folder;
-        var properties = Map.of(
+        var properties = Map.of("title", title);
+        return createFolderWithProperties(folder, properties);
+    }
+
+    @Override
+    public AssetApiResponse<Void> createFolder(final String folder, final Map<String, String> properties) {
+        return createFolderWithProperties(folder, properties);
+    }
+
+    public AssetApiResponse<Void> createFolderWithProperties(final String folder,
+                                                             final Map<String, String> properties) {
+        var formData = Map.of(
                 "class", "assetFolder",
-                "properties", Map.of("title", title)
+                "properties", properties
         );
-        var httpEntity = ApiHttpEntity.builder().body(properties).build();
+        var httpEntity = ApiHttpEntity.builder().body(formData).build();
         ApiHttpResponse<Void> response = apiHttpClient.post(buildFolderUrl(folder), httpEntity, Void.class);
         return AssetApiResponse.map(response);
     }
@@ -40,6 +51,4 @@ public class AssetFolderApiImpl implements AssetFolderApi {
         var normalizedFolder = StringUtils.removeStart(folder, "/content/dam");
         return "/api/assets/" + normalizedFolder;
     }
-
-
 }

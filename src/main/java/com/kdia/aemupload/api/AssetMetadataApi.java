@@ -4,7 +4,7 @@ import com.kdia.aemupload.model.AssetApiResponse;
 import com.kdia.aemupload.model.DamAsset;
 
 public interface AssetMetadataApi {
-    AssetApiResponse<DamAsset> getAsset(String fullQualifiedAssetId);
+    AssetApiResponse<DamAsset> getAsset(String assetPath);
 
-    AssetApiResponse<Void> deleteAsset(String fullQualifiedAssetId);
+    AssetApiResponse<Void> deleteAsset(String assetPath);
 }

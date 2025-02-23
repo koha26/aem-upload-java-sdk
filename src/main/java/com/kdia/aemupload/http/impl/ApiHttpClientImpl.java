@@ -2,7 +2,6 @@ package com.kdia.aemupload.http.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kdia.aemupload.config.ServerConfiguration;
-import com.kdia.aemupload.expection.ApiHttpClientException;
 import com.kdia.aemupload.http.ApiHttpClient;
 import com.kdia.aemupload.http.ApiHttpClientResponseHandlerFactory;
 import com.kdia.aemupload.http.entity.ApiHttpEntity;
@@ -51,7 +50,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     }
 
     @Override
-    public <T> ApiHttpResponse<T> get(final String url, final Class<T> responseType) throws ApiHttpClientException {
+    public <T> ApiHttpResponse<T> get(final String url, final Class<T> responseType) {
         var requestUrl = getRequestUrl(url);
         var request = new HttpGet(requestUrl);
         return executeRequest(request, responseType);
@@ -59,7 +58,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     @Override
     public <E, R> ApiHttpResponse<R> post(final String url, final ApiHttpEntity<E> entity,
-                                          final Class<R> responseType) throws ApiHttpClientException {
+                                          final Class<R> responseType) {
         return safeExecute(() -> {
             var requestUrl = getRequestUrl(url);
             var httpPost = new HttpPost(requestUrl);
@@ -71,7 +70,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     @Override
     public <E, R> ApiHttpResponse<R> put(final String url, final ApiHttpEntity<E> entity,
-                                         final Class<R> responseType) throws ApiHttpClientException {
+                                         final Class<R> responseType) {
         return safeExecute(() -> {
             var requestUrl = getRequestUrl(url);
             var httpPut = new HttpPut(requestUrl);
@@ -82,7 +81,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     }
 
     private <T> ApiHttpResponse<T> executeRequest(final HttpUriRequestBase request,
-                                                  final Class<T> responseType) throws ApiHttpClientException {
+                                                  final Class<T> responseType) {
         try {
             return httpClient.execute(request, responseHandlerFactory.createHandler(responseType));
         } catch (IOException e) {
@@ -95,7 +94,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     }
 
     private <T> void setRequestEntity(final HttpEntityContainer request,
-                                      final ApiHttpEntity<T> entity) throws ApiHttpClientException {
+                                      final ApiHttpEntity<T> entity) {
         T body = entity.getBody();
         if (body instanceof InputStream) {
             setInputStreamToBody(request, entity, (InputStream) body);

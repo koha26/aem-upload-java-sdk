@@ -19,8 +19,8 @@ public class ApiHttpClientBuilder {
         this.serverConfiguration = serverConfiguration;
     }
 
-    public ApiHttpClientBuilder builder(final CloseableHttpClient httpClient,
-                                        final ServerConfiguration serverConfiguration) {
+    public static ApiHttpClientBuilder builder(final CloseableHttpClient httpClient,
+                                               final ServerConfiguration serverConfiguration) {
         return new ApiHttpClientBuilder(httpClient, serverConfiguration);
     }
 

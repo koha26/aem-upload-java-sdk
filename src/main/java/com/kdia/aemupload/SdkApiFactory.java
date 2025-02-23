@@ -10,15 +10,15 @@ import com.kdia.aemupload.impl.DirectBinaryUploadApiImpl;
 
 public class SdkApiFactory {
 
-    public DirectBinaryUploadApi createDirectBinaryUploadApi(final ApiHttpClient apiHttpClient) {
+    public static DirectBinaryUploadApi createDirectBinaryUploadApi(final ApiHttpClient apiHttpClient) {
         return new DirectBinaryUploadApiImpl(apiHttpClient);
     }
 
-    public AssetFolderApi createAssetFolderApi(final ApiHttpClient apiHttpClient) {
+    public static AssetFolderApi createAssetFolderApi(final ApiHttpClient apiHttpClient) {
         return new AssetFolderApiImpl(apiHttpClient);
     }
 
-    public AssetMetadataApi createAssetMetadataApi(final ApiHttpClient apiHttpClient) {
+    public static AssetMetadataApi createAssetMetadataApi(final ApiHttpClient apiHttpClient) {
         return new AssetMetadataApiImpl(apiHttpClient);
     }
 }

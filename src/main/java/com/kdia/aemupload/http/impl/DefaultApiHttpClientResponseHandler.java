@@ -1,7 +1,7 @@
 package com.kdia.aemupload.http.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kdia.aemupload.http.ApiHttpResponse;
+import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.impl.classic.AbstractHttpClientResponseHandler;

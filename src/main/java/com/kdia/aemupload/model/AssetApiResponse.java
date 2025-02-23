@@ -1,6 +1,6 @@
 package com.kdia.aemupload.model;
 
-import com.kdia.aemupload.http.ApiHttpResponse;
+import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;

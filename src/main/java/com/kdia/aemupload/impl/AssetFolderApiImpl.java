@@ -2,8 +2,8 @@ package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.AssetFolderApi;
 import com.kdia.aemupload.http.ApiHttpClient;
-import com.kdia.aemupload.http.ApiHttpEntity;
-import com.kdia.aemupload.http.ApiHttpResponse;
+import com.kdia.aemupload.http.entity.ApiHttpEntity;
+import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import com.kdia.aemupload.model.AssetApiResponse;
 import com.kdia.aemupload.model.AssetElement;
 import lombok.AllArgsConstructor;
@@ -38,10 +38,7 @@ public class AssetFolderApiImpl implements AssetFolderApi {
 
     public AssetApiResponse<Void> createFolderWithProperties(final String folder,
                                                              final Map<String, String> properties) {
-        var formData = Map.of(
-                "class", "assetFolder",
-                "properties", properties
-        );
+        var formData = Map.of("class", "assetFolder", "properties", properties);
         var httpEntity = ApiHttpEntity.builder().body(formData).build();
         ApiHttpResponse<Void> response = apiHttpClient.post(buildFolderUrl(folder), httpEntity, Void.class);
         return AssetApiResponse.map(response);

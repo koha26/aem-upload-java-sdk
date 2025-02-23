@@ -5,8 +5,8 @@ import com.kdia.aemupload.config.ServerConfiguration;
 import com.kdia.aemupload.expection.ApiHttpClientException;
 import com.kdia.aemupload.http.ApiHttpClient;
 import com.kdia.aemupload.http.ApiHttpClientResponseHandlerFactory;
-import com.kdia.aemupload.http.ApiHttpEntity;
-import com.kdia.aemupload.http.ApiHttpResponse;
+import com.kdia.aemupload.http.entity.ApiHttpEntity;
+import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -98,23 +98,17 @@ public class ApiHttpClientImpl implements ApiHttpClient {
                                       final ApiHttpEntity<T> entity) throws ApiHttpClientException {
         T body = entity.getBody();
         if (body instanceof InputStream) {
-            request.setEntity(EntityBuilder.create()
-                    .setStream((InputStream) body)
-                    .setContentType(ContentType.create(entity.getHeaders().get(HttpHeaders.CONTENT_TYPE)))
-                    .build());
+            setInputStreamToBody(request, entity, (InputStream) body);
             return;
         }
         if (body instanceof Map) {
-            Map<String, Object> bodyMap = (Map<String, Object>) body;
-            List<NameValuePair> formParams = new ArrayList<>();
-            bodyMap.forEach((key, value) -> {
-                formParams.add(new BasicNameValuePair(key, String.valueOf(value)));
-            });
-            request.setEntity(EntityBuilder.create()
-                    .setParameters(formParams)
-                    .build());
+            setFormDataToBody(request, (Map<String, Object>) body);
             return;
         }
+        setJSONToBody(request, body);
+    }
+
+    private <T> void setJSONToBody(final HttpEntityContainer request, final T body) {
         try {
             String json = objectMapper.writeValueAsString(body);
             request.setEntity(EntityBuilder.create()
@@ -125,6 +119,22 @@ public class ApiHttpClientImpl implements ApiHttpClient {
             log.debug("Failed to serialize request body", e);
             throw new UncheckedIOException("Failed to serialize request body", e);
         }
+    }
+
+    private <T> void setFormDataToBody(final HttpEntityContainer request, final Map<String, Object> body) {
+        List<NameValuePair> formParams = new ArrayList<>();
+        body.forEach((key, value) -> formParams.add(new BasicNameValuePair(key, String.valueOf(value))));
+        request.setEntity(EntityBuilder.create()
+                .setParameters(formParams)
+                .build());
+    }
+
+    private <T> void setInputStreamToBody(final HttpEntityContainer request,
+                                          final ApiHttpEntity<T> entity, InputStream body) {
+        request.setEntity(EntityBuilder.create()
+                .setStream(body)
+                .setContentType(ContentType.create(entity.getHeaders().get(HttpHeaders.CONTENT_TYPE)))
+                .build());
     }
 
     private <R> ApiHttpResponse<R> safeExecute(final Supplier<ApiHttpResponse<R>> request) {

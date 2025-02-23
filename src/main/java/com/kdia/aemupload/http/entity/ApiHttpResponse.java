@@ -1,4 +1,4 @@
-package com.kdia.aemupload.http;
+package com.kdia.aemupload.http.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -2,8 +2,8 @@ package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.AssetMetadataApi;
 import com.kdia.aemupload.http.ApiHttpClient;
-import com.kdia.aemupload.http.ApiHttpEntity;
-import com.kdia.aemupload.http.ApiHttpResponse;
+import com.kdia.aemupload.http.entity.ApiHttpEntity;
+import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import com.kdia.aemupload.model.AssetApiResponse;
 import com.kdia.aemupload.model.DamAsset;
 import lombok.AllArgsConstructor;

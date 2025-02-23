@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kdia.aemupload.auth.ApiAccessTokenProvider;
 import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
 import com.kdia.aemupload.http.ApiHttpClient;
-import com.kdia.aemupload.http.ApiHttpEntity;
-import com.kdia.aemupload.http.ApiHttpResponse;
+import com.kdia.aemupload.http.entity.ApiHttpEntity;
+import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -116,6 +116,20 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         return null;
     }
 
+    AccessTokenWrapper getAccessToken(final String jwtToken) {
+        var requestUrl = String.format("https://%s/ims/exchange/jwt", apiAccessTokenConfiguration.getImsEndpoint());
+        var headers = Map.of("Content-Type", "application/x-www-form-urlencoded");
+        var httpEntity = ApiHttpEntity.builder()
+                .body(getFormParams(jwtToken))
+                .headers(headers)
+                .build();
+        ApiHttpResponse<AccessTokenWrapper> response = apiHttpClient.post(requestUrl, httpEntity, AccessTokenWrapper.class);
+
+        return response.getStatus() < HttpStatus.SC_REDIRECTION && response.getBody() != null
+                ? response.getBody()
+                : null;
+    }
+
     private String getPrivateKeyContentFromFile() throws IOException {
         Path privateKeyPath = Paths.get(apiAccessTokenConfiguration.getPrivateKeyFilePath());
         return String.join("", Files.readAllLines(privateKeyPath));
@@ -131,20 +145,6 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         formParams.put("client_secret", apiAccessTokenConfiguration.getClientSecret());
         formParams.put("jwt_token", jwtToken);
         return formParams;
-    }
-
-    AccessTokenWrapper getAccessToken(final String jwtToken) {
-        var requestUrl = String.format("https://%s/ims/exchange/jwt", apiAccessTokenConfiguration.getImsEndpoint());
-        var headers = Map.of("Content-Type", "application/x-www-form-urlencoded");
-        var httpEntity = ApiHttpEntity.builder()
-                .body(getFormParams(jwtToken))
-                .headers(headers)
-                .build();
-        ApiHttpResponse<AccessTokenWrapper> response = apiHttpClient.post(requestUrl, httpEntity, AccessTokenWrapper.class);
-
-        return response.getStatus() < HttpStatus.SC_REDIRECTION && response.getBody() != null
-                ? response.getBody()
-                : null;
     }
 
     @Data

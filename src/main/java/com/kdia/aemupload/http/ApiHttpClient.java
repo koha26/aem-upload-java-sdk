@@ -1,8 +1,8 @@
 package com.kdia.aemupload.http;
 
 import com.kdia.aemupload.expection.ApiHttpClientException;
-
-import java.util.Map;
+import com.kdia.aemupload.http.entity.ApiHttpEntity;
+import com.kdia.aemupload.http.entity.ApiHttpResponse;
 
 public interface ApiHttpClient {
     <T> ApiHttpResponse<T> get(String url, Class<T> responseType) throws ApiHttpClientException;

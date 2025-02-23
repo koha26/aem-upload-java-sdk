@@ -2,8 +2,8 @@ package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.DirectBinaryUploadApi;
 import com.kdia.aemupload.http.ApiHttpClient;
-import com.kdia.aemupload.http.ApiHttpEntity;
-import com.kdia.aemupload.http.ApiHttpResponse;
+import com.kdia.aemupload.http.entity.ApiHttpEntity;
+import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import com.kdia.aemupload.model.AssetApiResponse;
 import com.kdia.aemupload.options.CompleteBinaryUploadOptions;
 import com.kdia.aemupload.options.CompleteUploadResponse;
@@ -63,7 +63,7 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
             List<Path> parts = FileSplitUtil.splitFile(request.getBinary(), maxPartSize);
 
             for (int i = 0; i < parts.size(); i++) {
-                InputStream partInputStream = Files.newInputStream(parts.get(i));
+                var partInputStream = Files.newInputStream(parts.get(i));
                 URI uploadUri = request.getUploadURIs().get(i);
                 uploadPart(uploadUri, request.getContentType(), partInputStream);
                 Files.delete(parts.get(i));

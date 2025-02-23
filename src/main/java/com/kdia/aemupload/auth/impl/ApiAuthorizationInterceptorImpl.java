@@ -16,8 +16,8 @@ public class ApiAuthorizationInterceptorImpl implements ApiAuthorizationIntercep
     private ApiAccessTokenProvider apiAccessTokenProvider;
 
     @Override
-    public void process(HttpRequest httpRequest, EntityDetails entityDetails,
-                        HttpContext httpContext) {
+    public void process(final HttpRequest httpRequest, final EntityDetails entityDetails,
+                        final HttpContext httpContext) {
         if (isAuthorizationRequired(httpRequest) && !httpRequest.containsHeader("Authorization")) {
             httpRequest.setHeader("Authorization", "Bearer " + apiAccessTokenProvider.getAccessToken());
         }

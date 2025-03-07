@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kdia.aemupload.config.ServerConfiguration;
 import com.kdia.aemupload.http.ApiHttpClient;
 import com.kdia.aemupload.http.ApiHttpClientResponseHandlerFactory;
+import com.kdia.aemupload.http.entity.ApiHttpContext;
 import com.kdia.aemupload.http.entity.ApiHttpEntity;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.apache.hc.client5.http.classic.methods.HttpPut;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
 import org.apache.hc.client5.http.entity.EntityBuilder;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.protocol.HttpClientContext;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntityContainer;
 import org.apache.hc.core5.http.HttpHeaders;
@@ -50,40 +52,42 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     }
 
     @Override
-    public <T> ApiHttpResponse<T> get(final String url, final Class<T> responseType) {
+    public <T> ApiHttpResponse<T> get(final String url, final ApiHttpContext apiHttpContext, final Class<T> responseType) {
         var requestUrl = getRequestUrl(url);
         var request = new HttpGet(requestUrl);
-        return executeRequest(request, responseType);
+        return executeRequest(request, apiHttpContext, responseType);
     }
 
     @Override
     public <E, R> ApiHttpResponse<R> post(final String url, final ApiHttpEntity<E> entity,
-                                          final Class<R> responseType) {
+                                          final ApiHttpContext apiHttpContext, final Class<R> responseType) {
         return safeExecute(() -> {
             var requestUrl = getRequestUrl(url);
             var httpPost = new HttpPost(requestUrl);
             setRequestEntity(httpPost, entity);
             setHeaders(httpPost, entity);
-            return executeRequest(httpPost, responseType);
+            return executeRequest(httpPost, apiHttpContext, responseType);
         });
     }
 
     @Override
     public <E, R> ApiHttpResponse<R> put(final String url, final ApiHttpEntity<E> entity,
-                                         final Class<R> responseType) {
+                                         final ApiHttpContext apiHttpContext, final Class<R> responseType) {
         return safeExecute(() -> {
             var requestUrl = getRequestUrl(url);
             var httpPut = new HttpPut(requestUrl);
             setRequestEntity(httpPut, entity);
             setHeaders(httpPut, entity);
-            return executeRequest(httpPut, responseType);
+            return executeRequest(httpPut, apiHttpContext, responseType);
         });
     }
 
     private <T> ApiHttpResponse<T> executeRequest(final HttpUriRequestBase request,
+                                                  final ApiHttpContext apiHttpContext,
                                                   final Class<T> responseType) {
         try {
-            return httpClient.execute(request, responseHandlerFactory.createHandler(responseType));
+            HttpClientContext clientContext = createHttpClientContext(apiHttpContext);
+            return httpClient.execute(request, clientContext, responseHandlerFactory.createHandler(responseType));
         } catch (IOException e) {
             log.debug("Error while executing request", e);
             return ApiHttpResponse.<T>builder()
@@ -91,6 +95,15 @@ public class ApiHttpClientImpl implements ApiHttpClient {
                     .errorMessage("Error while executing request: " + request.getMethod() + " " + request.getRequestUri())
                     .build();
         }
+    }
+
+    private HttpClientContext createHttpClientContext(final ApiHttpContext apiHttpContext) {
+        if (apiHttpContext == null || apiHttpContext.getAttributes().isEmpty()) {
+            return null;
+        }
+        HttpClientContext clientContext = HttpClientContext.create();
+        apiHttpContext.getAttributes().forEach(clientContext::setAttribute);
+        return clientContext;
     }
 
     private <T> void setRequestEntity(final HttpEntityContainer request,
@@ -120,7 +133,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
         }
     }
 
-    private <T> void setFormDataToBody(final HttpEntityContainer request, final Map<String, Object> body) {
+    private void setFormDataToBody(final HttpEntityContainer request, final Map<String, Object> body) {
         List<NameValuePair> formParams = new ArrayList<>();
         body.forEach((key, value) -> formParams.add(new BasicNameValuePair(key, String.valueOf(value))));
         request.setEntity(EntityBuilder.create()
@@ -130,10 +143,15 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     private <T> void setInputStreamToBody(final HttpEntityContainer request,
                                           final ApiHttpEntity<T> entity, InputStream body) {
-        request.setEntity(EntityBuilder.create()
-                .setStream(body)
-                .setContentType(ContentType.create(entity.getHeaders().get(HttpHeaders.CONTENT_TYPE)))
-                .build());
+        try {
+            request.setEntity(EntityBuilder.create()
+                    .setBinary(toByteArray(body))
+                    .setContentType(ContentType.create(entity.getHeaders().get(HttpHeaders.CONTENT_TYPE)))
+                    .build());
+        } catch (IOException e) {
+            log.error("Failed to serialize request body of Input Stream type", e);
+            throw new UncheckedIOException(e);
+        }
     }
 
     private <R> ApiHttpResponse<R> safeExecute(final Supplier<ApiHttpResponse<R>> request) {
@@ -159,6 +177,10 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     private String getHostUrl() {
         return serverConfiguration.getSchema() + "://" + serverConfiguration.getHost()
                 + (StringUtils.isEmpty(serverConfiguration.getPort()) ? "" : ":" + serverConfiguration.getPort());
+    }
+
+    private byte[] toByteArray(final InputStream inputStream) throws IOException {
+        return inputStream.readAllBytes();
     }
 
 }

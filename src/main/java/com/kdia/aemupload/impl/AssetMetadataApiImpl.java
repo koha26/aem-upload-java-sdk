@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 
+import static com.kdia.aemupload.http.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
+
 @Slf4j
 @AllArgsConstructor
 public class AssetMetadataApiImpl implements AssetMetadataApi {
@@ -19,7 +21,8 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
 
     @Override
     public AssetApiResponse<DamAsset> getAsset(final String assetPath) {
-        ApiHttpResponse<DamAsset> response = apiHttpClient.get(buildAssetMetadataUrl(assetPath), DamAsset.class);
+        ApiHttpResponse<DamAsset> response = apiHttpClient.get(buildAssetMetadataUrl(assetPath),
+                AUTHORIZABLE_API_REQUEST, DamAsset.class);
         return AssetApiResponse.map(response);
     }
 
@@ -27,7 +30,7 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
     public AssetApiResponse<Void> deleteAsset(final String assetPath) {
         Map<String, Object> properties = Map.of(":operation", "delete");
         var httpEntity = ApiHttpEntity.builder().body(properties).build();
-        ApiHttpResponse<Void> response = apiHttpClient.post(assetPath, httpEntity, Void.class);
+        ApiHttpResponse<Void> response = apiHttpClient.post(assetPath, httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
         return AssetApiResponse.map(response);
     }
 

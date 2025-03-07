@@ -12,6 +12,8 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
+import static com.kdia.aemupload.http.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
+
 @Slf4j
 @AllArgsConstructor
 public class AssetFolderApiImpl implements AssetFolderApi {
@@ -20,7 +22,8 @@ public class AssetFolderApiImpl implements AssetFolderApi {
 
     @Override
     public AssetApiResponse<AssetElement> getFolder(final String folder) {
-        ApiHttpResponse<AssetElement> response = apiHttpClient.get(buildFolderUrl(folder), AssetElement.class);
+        ApiHttpResponse<AssetElement> response =
+                apiHttpClient.get(buildFolderUrl(folder), AUTHORIZABLE_API_REQUEST, AssetElement.class);
         return AssetApiResponse.map(response);
     }
 
@@ -40,7 +43,8 @@ public class AssetFolderApiImpl implements AssetFolderApi {
                                                              final Map<String, String> properties) {
         var formData = Map.of("class", "assetFolder", "properties", properties);
         var httpEntity = ApiHttpEntity.builder().body(formData).build();
-        ApiHttpResponse<Void> response = apiHttpClient.post(buildFolderUrl(folder), httpEntity, Void.class);
+        ApiHttpResponse<Void> response =
+                apiHttpClient.post(buildFolderUrl(folder), httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
         return AssetApiResponse.map(response);
     }
 

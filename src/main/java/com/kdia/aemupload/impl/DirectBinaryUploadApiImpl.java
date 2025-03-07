@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import static com.kdia.aemupload.http.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
 import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
 import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 
@@ -46,7 +47,7 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
                     .headers(Map.of(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString()))
                     .build();
             ApiHttpResponse<InitiateUploadResponse> responseEntity =
-                    apiHttpClient.post(initiateUploadUrl, httpEntity, InitiateUploadResponse.class);
+                    apiHttpClient.post(initiateUploadUrl, httpEntity, AUTHORIZABLE_API_REQUEST, InitiateUploadResponse.class);
 
             return AssetApiResponse.map(responseEntity);
         } catch (Exception e) {
@@ -65,8 +66,11 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
             for (int i = 0; i < parts.size(); i++) {
                 var partInputStream = Files.newInputStream(parts.get(i));
                 URI uploadUri = request.getUploadURIs().get(i);
-                uploadPart(uploadUri, request.getContentType(), partInputStream);
+                boolean isUploaded = uploadPart(uploadUri, request.getContentType(), partInputStream);
                 Files.delete(parts.get(i));
+                if (!isUploaded) {
+                    return AssetApiResponse.fail("Failed to upload binary");
+                }
                 log.info("Uploaded {} binary part to {}", i, uploadUri);
             }
             return AssetApiResponse.success(new UploadBinaryResponse(parts.size()));
@@ -84,7 +88,7 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
                     .headers(Map.of(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString()))
                     .build();
             ApiHttpResponse<CompleteUploadResponse> responseEntity =
-                    apiHttpClient.post(request.getCompleteUri(), httpEntity, CompleteUploadResponse.class);
+                    apiHttpClient.post(request.getCompleteUri(), httpEntity, AUTHORIZABLE_API_REQUEST, CompleteUploadResponse.class);
 
             return AssetApiResponse.map(responseEntity);
         } catch (Exception e) {
@@ -93,13 +97,17 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
         }
     }
 
-    private void uploadPart(final URI uploadUrl, final String contentType, final InputStream partInputStream) {
+    private boolean uploadPart(final URI uploadUrl, final String contentType, final InputStream partInputStream) {
         var decodedUri = decodeUploadBinaryPartUri(uploadUrl);
         var httpEntity = ApiHttpEntity.builder()
                 .body(partInputStream)
                 .headers(Map.of(CONTENT_TYPE, contentType))
                 .build();
-        apiHttpClient.put(decodedUri, httpEntity, Void.class);
+        ApiHttpResponse<Void> response = apiHttpClient.put(decodedUri, httpEntity, Void.class);
+        if (!response.isSuccess()) {
+            log.error("Failed to upload binary part to {}", uploadUrl);
+        }
+        return response.isSuccess();
     }
 
     private String decodeUploadBinaryPartUri(final URI uploadUrl) {

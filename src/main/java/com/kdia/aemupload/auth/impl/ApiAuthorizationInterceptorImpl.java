@@ -2,13 +2,12 @@ package com.kdia.aemupload.auth.impl;
 
 import com.kdia.aemupload.auth.ApiAccessTokenProvider;
 import com.kdia.aemupload.auth.ApiAuthorizationInterceptor;
+import com.kdia.aemupload.http.ApiHttpClient;
 import lombok.AllArgsConstructor;
 import org.apache.hc.core5.http.EntityDetails;
-import org.apache.hc.core5.http.HttpException;
+import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.HttpRequest;
 import org.apache.hc.core5.http.protocol.HttpContext;
-
-import java.io.IOException;
 
 @AllArgsConstructor
 public class ApiAuthorizationInterceptorImpl implements ApiAuthorizationInterceptor {
@@ -18,13 +17,18 @@ public class ApiAuthorizationInterceptorImpl implements ApiAuthorizationIntercep
     @Override
     public void process(final HttpRequest httpRequest, final EntityDetails entityDetails,
                         final HttpContext httpContext) {
-        if (isAuthorizationRequired(httpRequest) && !httpRequest.containsHeader("Authorization")) {
-            httpRequest.setHeader("Authorization", "Bearer " + apiAccessTokenProvider.getAccessToken());
+        if (isAuthorizationRequired(httpRequest, httpContext) && !httpRequest.containsHeader(HttpHeaders.AUTHORIZATION)) {
+            httpRequest.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiAccessTokenProvider.getAccessToken());
         }
     }
 
     @Override
-    public boolean isAuthorizationRequired(final HttpRequest request) {
-        return !request.getRequestUri().startsWith("/ims/exchange/jwt");
+    public boolean isAuthorizationRequired(final HttpRequest request, final HttpContext httpContext) {
+        return isAuthorizableContext(httpContext);
+    }
+
+    private boolean isAuthorizableContext(final HttpContext httpContext) {
+        Object attribute = httpContext.getAttribute(ApiHttpClient.API_AUTHORIZATION_REQUIRED_REQ_ATTR);
+        return attribute instanceof String && Boolean.parseBoolean(String.valueOf(attribute));
     }
 }

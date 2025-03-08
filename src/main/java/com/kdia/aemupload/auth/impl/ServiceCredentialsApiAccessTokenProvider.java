@@ -69,7 +69,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         return new Date();
     }
 
-    String getJWTToken() {
+    private String getJWTToken() {
         RSAPrivateKey privateKey = getRsaPrivateKey();
         if (privateKey == null) {
             return null;
@@ -81,7 +81,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
                 .compact();
     }
 
-    Claims createClaims() {
+    private Claims createClaims() {
         String imsHost = apiAccessTokenConfiguration.getImsEndpoint();
         Claims jwtClaims = Jwts.claims()
                 .setSubject(apiAccessTokenConfiguration.getId())
@@ -94,7 +94,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         return jwtClaims;
     }
 
-    RSAPrivateKey getRsaPrivateKey() {
+    private RSAPrivateKey getRsaPrivateKey() {
         try {
             String privateKeyContent = StringUtils.isNoneEmpty(apiAccessTokenConfiguration.getPrivateKeyContent())
                     ? apiAccessTokenConfiguration.getPrivateKeyContent()
@@ -116,7 +116,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         return null;
     }
 
-    AccessTokenWrapper getAccessToken(final String jwtToken) {
+    private AccessTokenWrapper getAccessToken(final String jwtToken) {
         var requestUrl = String.format("https://%s/ims/exchange/jwt", apiAccessTokenConfiguration.getImsEndpoint());
         var headers = Map.of("Content-Type", "application/x-www-form-urlencoded");
         var httpEntity = ApiHttpEntity.builder()

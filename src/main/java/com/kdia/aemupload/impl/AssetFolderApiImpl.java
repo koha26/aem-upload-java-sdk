@@ -6,6 +6,7 @@ import com.kdia.aemupload.http.entity.ApiHttpEntity;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import com.kdia.aemupload.model.AssetApiResponse;
 import com.kdia.aemupload.model.AssetElement;
+import com.kdia.aemupload.utils.ApiPathNormalizer;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -23,7 +24,7 @@ public class AssetFolderApiImpl implements AssetFolderApi {
     @Override
     public AssetApiResponse<AssetElement> getFolder(final String folder) {
         ApiHttpResponse<AssetElement> response =
-                apiHttpClient.get(buildFolderUrl(folder), AUTHORIZABLE_API_REQUEST, AssetElement.class);
+                apiHttpClient.get(ApiPathNormalizer.normalize(folder), AUTHORIZABLE_API_REQUEST, AssetElement.class);
         return AssetApiResponse.map(response);
     }
 
@@ -39,17 +40,13 @@ public class AssetFolderApiImpl implements AssetFolderApi {
         return createFolderWithProperties(folder, properties);
     }
 
-    public AssetApiResponse<Void> createFolderWithProperties(final String folder,
-                                                             final Map<String, String> properties) {
+    private AssetApiResponse<Void> createFolderWithProperties(final String folder,
+                                                              final Map<String, String> properties) {
         var formData = Map.of("class", "assetFolder", "properties", properties);
         var httpEntity = ApiHttpEntity.builder().body(formData).build();
         ApiHttpResponse<Void> response =
-                apiHttpClient.post(buildFolderUrl(folder), httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
+                apiHttpClient.post(ApiPathNormalizer.normalize(folder), httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
         return AssetApiResponse.map(response);
     }
 
-    private String buildFolderUrl(final String folder) {
-        var normalizedFolder = StringUtils.removeStart(folder, "/content/dam");
-        return "/api/assets/" + normalizedFolder;
-    }
 }

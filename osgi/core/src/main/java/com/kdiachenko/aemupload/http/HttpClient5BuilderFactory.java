@@ -1,0 +1,8 @@
+package com.kdiachenko.aemupload.http;
+
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+
+public interface HttpClient5BuilderFactory {
+
+    HttpClientBuilder createBuilder();
+}

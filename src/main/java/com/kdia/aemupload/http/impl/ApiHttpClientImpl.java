@@ -1,14 +1,12 @@
 package com.kdia.aemupload.http.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kdia.aemupload.config.ServerConfiguration;
 import com.kdia.aemupload.http.ApiHttpClient;
 import com.kdia.aemupload.http.ApiHttpClientResponseHandlerFactory;
 import com.kdia.aemupload.http.entity.ApiHttpContext;
 import com.kdia.aemupload.http.entity.ApiHttpEntity;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.classic.methods.HttpPut;
@@ -35,26 +33,23 @@ import java.util.function.Supplier;
 public class ApiHttpClientImpl implements ApiHttpClient {
 
     private final CloseableHttpClient httpClient;
-    private final ServerConfiguration serverConfiguration;
     private final ObjectMapper objectMapper;
     private final ApiHttpClientResponseHandlerFactory responseHandlerFactory;
 
-    public ApiHttpClientImpl(CloseableHttpClient httpClient, ServerConfiguration serverConfiguration) {
-        this(httpClient, serverConfiguration, new ObjectMapper(), DefaultApiHttpClientResponseHandlerFactory.INSTANCE);
+    public ApiHttpClientImpl(CloseableHttpClient httpClient) {
+        this(httpClient, new ObjectMapper(), DefaultApiHttpClientResponseHandlerFactory.INSTANCE);
     }
 
-    public ApiHttpClientImpl(CloseableHttpClient httpClient, ServerConfiguration serverConfiguration,
-                             ObjectMapper objectMapper, ApiHttpClientResponseHandlerFactory responseHandlerFactory) {
+    public ApiHttpClientImpl(CloseableHttpClient httpClient, ObjectMapper objectMapper,
+                             ApiHttpClientResponseHandlerFactory responseHandlerFactory) {
         this.httpClient = httpClient;
-        this.serverConfiguration = serverConfiguration;
         this.objectMapper = objectMapper;
         this.responseHandlerFactory = responseHandlerFactory;
     }
 
     @Override
     public <T> ApiHttpResponse<T> get(final String url, final ApiHttpContext apiHttpContext, final Class<T> responseType) {
-        var requestUrl = getRequestUrl(url);
-        var request = new HttpGet(requestUrl);
+        var request = new HttpGet(url);
         return executeRequest(request, apiHttpContext, responseType);
     }
 
@@ -62,8 +57,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     public <E, R> ApiHttpResponse<R> post(final String url, final ApiHttpEntity<E> entity,
                                           final ApiHttpContext apiHttpContext, final Class<R> responseType) {
         return safeExecute(() -> {
-            var requestUrl = getRequestUrl(url);
-            var httpPost = new HttpPost(requestUrl);
+            var httpPost = new HttpPost(url);
             setRequestEntity(httpPost, entity);
             setHeaders(httpPost, entity);
             return executeRequest(httpPost, apiHttpContext, responseType);
@@ -74,8 +68,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     public <E, R> ApiHttpResponse<R> put(final String url, final ApiHttpEntity<E> entity,
                                          final ApiHttpContext apiHttpContext, final Class<R> responseType) {
         return safeExecute(() -> {
-            var requestUrl = getRequestUrl(url);
-            var httpPut = new HttpPut(requestUrl);
+            var httpPut = new HttpPut(url);
             setRequestEntity(httpPut, entity);
             setHeaders(httpPut, entity);
             return executeRequest(httpPut, apiHttpContext, responseType);
@@ -167,16 +160,6 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     private <E> void setHeaders(final HttpUriRequestBase httpRequest, final ApiHttpEntity<E> entity) {
         entity.getHeaders().forEach(httpRequest::setHeader);
-    }
-
-    private String getRequestUrl(final String url) {
-        var hostUrl = getHostUrl();
-        return StringUtils.startsWith(url, "/") ? hostUrl + url : url;
-    }
-
-    private String getHostUrl() {
-        return serverConfiguration.getSchema() + "://" + serverConfiguration.getHost()
-                + (StringUtils.isEmpty(serverConfiguration.getPort()) ? "" : ":" + serverConfiguration.getPort());
     }
 
     private byte[] toByteArray(final InputStream inputStream) throws IOException {

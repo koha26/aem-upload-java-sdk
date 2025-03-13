@@ -1,6 +1,7 @@
 package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.AssetFolderApi;
+import com.kdia.aemupload.config.ServerConfiguration;
 import com.kdia.aemupload.http.ApiHttpClient;
 import com.kdia.aemupload.http.entity.ApiHttpEntity;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
@@ -20,11 +21,13 @@ import static com.kdia.aemupload.http.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
 public class AssetFolderApiImpl implements AssetFolderApi {
 
     private final ApiHttpClient apiHttpClient;
+    private final ServerConfiguration serverConfiguration;
 
     @Override
     public AssetApiResponse<AssetElement> getFolder(final String folder) {
+        var requestUrl = serverConfiguration.getHostUrl() + ApiPathNormalizer.normalize(folder);
         ApiHttpResponse<AssetElement> response =
-                apiHttpClient.get(ApiPathNormalizer.normalize(folder), AUTHORIZABLE_API_REQUEST, AssetElement.class);
+                apiHttpClient.get(requestUrl, AUTHORIZABLE_API_REQUEST, AssetElement.class);
         return AssetApiResponse.map(response);
     }
 
@@ -44,8 +47,9 @@ public class AssetFolderApiImpl implements AssetFolderApi {
                                                               final Map<String, String> properties) {
         var formData = Map.of("class", "assetFolder", "properties", properties);
         var httpEntity = ApiHttpEntity.builder().body(formData).build();
+        var requestUrl = serverConfiguration.getHostUrl() + ApiPathNormalizer.normalize(folder);
         ApiHttpResponse<Void> response =
-                apiHttpClient.post(ApiPathNormalizer.normalize(folder), httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
+                apiHttpClient.post(requestUrl, httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
         return AssetApiResponse.map(response);
     }
 

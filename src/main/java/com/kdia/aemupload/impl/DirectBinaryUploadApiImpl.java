@@ -1,6 +1,7 @@
 package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.DirectBinaryUploadApi;
+import com.kdia.aemupload.config.ServerConfiguration;
 import com.kdia.aemupload.http.ApiHttpClient;
 import com.kdia.aemupload.http.entity.ApiHttpEntity;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
@@ -37,6 +38,7 @@ import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
 
     private final ApiHttpClient apiHttpClient;
+    private final ServerConfiguration serverConfiguration;
 
     @Override
     public AssetApiResponse<InitiateUploadResponse> initiateUpload(final InitiateBinaryUploadOptions request) {
@@ -142,6 +144,6 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
 
     private String buildInitiateUploadUrl(final InitiateBinaryUploadOptions options) {
         var normalizedDamAssetFolder = StringUtils.removeEnd(options.getDamAssetFolder(), "/");
-        return normalizedDamAssetFolder + ".initiateUpload.json";
+        return serverConfiguration.getHostUrl() + normalizedDamAssetFolder + ".initiateUpload.json";
     }
 }

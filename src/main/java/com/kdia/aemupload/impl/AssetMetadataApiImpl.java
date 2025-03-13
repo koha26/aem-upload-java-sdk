@@ -1,6 +1,7 @@
 package com.kdia.aemupload.impl;
 
 import com.kdia.aemupload.api.AssetMetadataApi;
+import com.kdia.aemupload.config.ServerConfiguration;
 import com.kdia.aemupload.http.ApiHttpClient;
 import com.kdia.aemupload.http.entity.ApiHttpEntity;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
@@ -19,6 +20,7 @@ import static com.kdia.aemupload.http.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
 public class AssetMetadataApiImpl implements AssetMetadataApi {
 
     private final ApiHttpClient apiHttpClient;
+    private final ServerConfiguration serverConfiguration;
 
     @Override
     public AssetApiResponse<DamAsset> getAssetMetadata(final String assetPath) {
@@ -31,8 +33,9 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
     public AssetApiResponse<Void> updateAssetMetadata(final String assetPath, final Map<String, String> metadata) {
         var formData = Map.of("class", "asset", "properties", metadata);
         var httpEntity = ApiHttpEntity.builder().body(formData).build();
+        var requestUrl = serverConfiguration.getHostUrl() + ApiPathNormalizer.normalize(assetPath);
         ApiHttpResponse<Void> response =
-                apiHttpClient.put(ApiPathNormalizer.normalize(assetPath), httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
+                apiHttpClient.put(requestUrl, httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
         return AssetApiResponse.map(response);
     }
 
@@ -40,13 +43,14 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
     public AssetApiResponse<Void> deleteAsset(final String assetPath) {
         Map<String, Object> properties = Map.of(":operation", "delete");
         var httpEntity = ApiHttpEntity.builder().body(properties).build();
-        ApiHttpResponse<Void> response = apiHttpClient.post(ApiPathNormalizer.normalize(assetPath),
+        var requestUrl = serverConfiguration.getHostUrl() + ApiPathNormalizer.normalize(assetPath);
+        ApiHttpResponse<Void> response = apiHttpClient.post(requestUrl,
                 httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
         return AssetApiResponse.map(response);
     }
 
     private String buildAssetMetadataUrl(final String assetPath) {
-        return assetPath + "/jcr:content/metadata.json";
+        return serverConfiguration.getHostUrl() + assetPath + "/jcr:content/metadata.json";
     }
 
 }

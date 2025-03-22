@@ -89,8 +89,9 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
                     .body(toCompleteUploadFormData(request))
                     .headers(Map.of(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString()))
                     .build();
+            var completeUrl = apiServerConfiguration.getHostUrl() + request.getCompleteUri();
             ApiHttpResponse<CompleteUploadResponse> responseEntity =
-                    apiHttpClient.post(request.getCompleteUri(), httpEntity, AUTHORIZABLE_API_REQUEST, CompleteUploadResponse.class);
+                    apiHttpClient.post(completeUrl, httpEntity, AUTHORIZABLE_API_REQUEST, CompleteUploadResponse.class);
 
             return AssetApiResponse.map(responseEntity);
         } catch (Exception e) {

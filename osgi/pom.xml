@@ -28,8 +28,6 @@
     <modules>
         <module>all</module>
         <module>core</module>
-        <module>ui.apps</module>
-        <module>ui.config</module>
     </modules>
     <properties>
         <aem.host>localhost</aem.host>
@@ -40,7 +38,6 @@
         <sling.password>admin</sling.password>
         <vault.user>admin</vault.user>
         <vault.password>admin</vault.password>
-        <frontend-maven-plugin.version>1.12.0</frontend-maven-plugin.version>
         <core.wcm.components.version>2.26.0</core.wcm.components.version>
         <bnd.version>5.1.2</bnd.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -62,13 +59,6 @@
                     <goals>install</goals>
                     <releaseProfiles>release</releaseProfiles>
                 </configuration>
-            </plugin>
-            <!-- Maven Source Plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>3.0.1</version>
-                <inherited>true</inherited>
             </plugin>
             <!-- Maven Enforcer Plugin -->
             <plugin>
@@ -105,40 +95,6 @@
         </plugins>
         <pluginManagement>
             <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-assembly-plugin</artifactId>
-                    <version>3.3.0</version>
-                    <configuration>
-                        <tarLongFileMode>posix</tarLongFileMode>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>com.github.eirslett</groupId>
-                    <artifactId>frontend-maven-plugin</artifactId>
-                    <version>${frontend-maven-plugin.version}</version>
-                    <configuration>
-                        <nodeVersion>v16.17.0</nodeVersion>
-                        <npmVersion>8.15.0</npmVersion>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <id>install node and npm</id>
-                            <goals>
-                                <goal>install-node-and-npm</goal>
-                            </goals>
-                        </execution>
-                        <execution>
-                            <id>npm ci</id>
-                            <goals>
-                                <goal>npm</goal>
-                            </goals>
-                            <configuration>
-                                <arguments>ci</arguments>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
                 <!-- Maven Jar Plugin -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -252,15 +208,6 @@ Bundle-DocURL:
                     <configuration>
                         <slingUrl>http://${aem.host}:${aem.port}/system/console</slingUrl>
                         <deploymentMethod>WebConsole</deploymentMethod>
-                    </configuration>
-                </plugin>
-                <!-- HTL Maven Plugin -->
-                <plugin>
-                    <groupId>org.apache.sling</groupId>
-                    <artifactId>htl-maven-plugin</artifactId>
-                    <version>2.0.2-1.4.0</version>
-                    <configuration>
-                        <failOnWarnings>true</failOnWarnings>
                     </configuration>
                 </plugin>
                 <!-- Jackrabbit FileVault Package Plugin -->
@@ -519,11 +466,6 @@ Bundle-DocURL:
                 <version>${aem.sdk.api}</version>
                 <scope>provided</scope>
             </dependency>
-            <dependency>
-                <groupId>com.adobe.cq</groupId>
-                <artifactId>core.wcm.components.core</artifactId>
-                <version>${core.wcm.components.version}</version>
-            </dependency>
             <!-- Testing -->
             <dependency>
                 <groupId>org.junit</groupId>
@@ -559,17 +501,6 @@ Bundle-DocURL:
                     <exclusion>
                         <groupId>org.apache.sling</groupId>
                         <artifactId>org.apache.sling.scripting.api</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.sling</groupId>
-                <artifactId>org.apache.sling.testing.caconfig-mock-plugin</artifactId>
-                <version>1.4.0</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>commons-collections</groupId>
-                        <artifactId>commons-collections</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>

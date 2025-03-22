@@ -49,26 +49,14 @@
                 <artifactId>filevault-package-maven-plugin</artifactId>
                 <extensions>true</extensions>
                 <configuration>
-                    <group>com.mysite</group>
+                    <group>com.kdiachenko</group>
                     <packageType>container</packageType>
                     <!-- skip sub package validation for now as some vendor packages like CIF apps will not pass -->
                     <skipSubPackageValidation>true</skipSubPackageValidation>
                     <embeddeds>
                         <embedded>
                             <groupId>com.kdiachenko</groupId>
-                            <artifactId>aem-upload-java-sdk-extension.ui.apps</artifactId>
-                            <type>zip</type>
-                            <target>/apps/aem-upload-java-sdk-packages/application/install</target>
-                        </embedded>
-                        <embedded>
-                            <groupId>com.kdiachenko</groupId>
                             <artifactId>aem-upload-java-sdk-extension.core</artifactId>
-                            <target>/apps/aem-upload-java-sdk-packages/application/install</target>
-                        </embedded>
-                        <embedded>
-                            <groupId>com.kdiachenko</groupId>
-                            <artifactId>aem-upload-java-sdk-extension.ui.config</artifactId>
-                            <type>zip</type>
                             <target>/apps/aem-upload-java-sdk-packages/application/install</target>
                         </embedded>
                     </embeddeds>
@@ -102,7 +90,7 @@
                     <execution>
                         <id>aem-analyser</id>
                         <goals>
-                            <goal>project-analyse</goal>                           
+                            <goal>project-analyse</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -172,18 +160,6 @@
     <!-- D E P E N D E N C I E S                                                -->
     <!-- ====================================================================== -->
     <dependencies>
-        <dependency>
-            <groupId>com.kdiachenko</groupId>
-            <artifactId>aem-upload-java-sdk-extension.ui.apps</artifactId>
-            <version>${project.version}</version>
-            <type>zip</type>
-        </dependency>
-        <dependency>
-            <groupId>com.kdiachenko</groupId>
-            <artifactId>aem-upload-java-sdk-extension.ui.config</artifactId>
-            <version>${project.version}</version>
-            <type>zip</type>
-        </dependency>
 
     </dependencies>
 </project>

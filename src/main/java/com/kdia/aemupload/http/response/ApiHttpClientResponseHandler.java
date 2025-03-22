@@ -25,6 +25,9 @@ public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseH
     public ApiHttpResponse<T> handleEntity(final HttpEntity entity) throws IOException {
         try {
             String responseBody = EntityUtils.toString(entity);
+            if (Void.class.equals(responseType)) {
+                return ApiHttpResponse.<T>builder().build();
+            }
             T body = objectMapper.readValue(responseBody, responseType);
             return ApiHttpResponse.<T>builder()
                     .body(body)

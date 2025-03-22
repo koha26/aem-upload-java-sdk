@@ -3,15 +3,17 @@ package com.kdiachenko.aemupload.config;
 import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 import java.util.Arrays;
 import java.util.List;
 
-@Component(service = ApiAccessTokenConfiguration.class)
-@ObjectClassDefinition(name = "AEM Upload SDK - Access Token Configuration")
+@Component(service = ApiAccessTokenConfiguration.class, configurationPolicy = ConfigurationPolicy.REQUIRE)
+@Designate(ocd = ApiAccessTokenConfiguration.class)
 public class ApiAccessTokenConfigurationProvider implements ApiAccessTokenConfiguration {
 
     private String localDevelopmentAccessToken;
@@ -97,41 +99,44 @@ public class ApiAccessTokenConfigurationProvider implements ApiAccessTokenConfig
         return localDevelopmentAccessToken;
     }
 
-    @ObjectClassDefinition(name = "AEM Upload SDK - Server Configuration",
-            description = "This configuration is used to define the destination server configuration")
-    public static @interface Config {
+    @ObjectClassDefinition(name = "AEM Upload SDK - API Access Token Configuration",
+            description = "This configuration is used to define the API access token retrieval parameters.")
+    public @interface Config {
 
-        @AttributeDefinition(name = "Destination server schema")
+        @AttributeDefinition(name = "Local development access token")
         String localDevelopmentAccessToken();
 
-        @AttributeDefinition(name = "Destination server host")
+        @AttributeDefinition(name = "IMS endpoint (including host)")
         String imsEndpoint();
 
-        @AttributeDefinition(name = "Destination server port")
+        @AttributeDefinition(name = "Meta scopes")
         String[] metaScopes();
 
-        @AttributeDefinition(name = "Destination server port")
+        @AttributeDefinition(name = "Client ID")
         String clientId();
 
-        @AttributeDefinition(name = "Destination server port")
+        @AttributeDefinition(name = "Client secret")
         String clientSecret();
 
-        @AttributeDefinition(name = "Destination server port")
+        @AttributeDefinition(name = "Email")
         String email();
 
-        @AttributeDefinition(name = "Destination server port")
+        @AttributeDefinition(name = "Configuration ID")
         String id();
 
-        @AttributeDefinition(name = "Destination server port")
+        @AttributeDefinition(name = "Organization ID")
         String org();
 
-        @AttributeDefinition(name = "Destination server port")
+        @AttributeDefinition(
+                name = "Private key file path",
+                description = "Path to private key file in the file system. Ignored if privateKeyContent defined."
+        )
         String privateKeyFilePath();
 
-        @AttributeDefinition(name = "Destination server port")
+        @AttributeDefinition(name = "Private key content")
         String privateKeyContent();
 
-        @AttributeDefinition(name = "Destination server port")
+        @AttributeDefinition(name = "Access token life time (in secs)")
         String tokenLifeTimeInSec();
     }
 }

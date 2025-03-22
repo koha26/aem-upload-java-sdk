@@ -11,7 +11,8 @@ import org.osgi.service.component.annotations.Reference;
 @Component(
         service = ApiAccessTokenProviderFactory.class,
         properties = {
-                Constants.SERVICE_DESCRIPTION + "=" + "AEM Upload SDK - Default API Access Token Provider Factory"
+                Constants.SERVICE_DESCRIPTION + "=" + "AEM Upload SDK - Default API Access Token Provider Factory",
+                Constants.SERVICE_RANKING + "=" + "10"
         }
 )
 public class OsgiDefaultApiAccessTokenProviderFactory implements ApiAccessTokenProviderFactory {

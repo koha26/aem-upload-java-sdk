@@ -15,7 +15,8 @@ import org.osgi.service.component.annotations.Reference;
 @Component(
         service = SdkApiProvider.class,
         properties = {
-                Constants.SERVICE_DESCRIPTION + "=" + "AEM Upload SDK - API provider"
+                Constants.SERVICE_DESCRIPTION + "=" + "AEM Upload SDK - API provider",
+                Constants.SERVICE_RANKING + "=" + "10"
         }
 )
 public class SdkApiProviderImpl implements SdkApiProvider {

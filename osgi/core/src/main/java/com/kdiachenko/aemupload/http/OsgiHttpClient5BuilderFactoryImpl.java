@@ -21,16 +21,20 @@ import java.util.concurrent.TimeUnit;
 @Component(
         service = HttpClient5BuilderFactory.class,
         properties = {
-              Constants.SERVICE_DESCRIPTION + "=" + "AEM Upload SDK - HTTP Client 5 Builder Factory"
+                Constants.SERVICE_DESCRIPTION + "=" + "AEM Upload SDK - HTTP Client 5 Builder Factory",
+                Constants.SERVICE_RANKING + "=" + "10"
         }
 )
 @Designate(ocd = OsgiHttpClient5BuilderFactoryImpl.Config.class)
 public class OsgiHttpClient5BuilderFactoryImpl extends AbstractHttpClient5BuilderFactoryImpl {
 
     private RequestConfig defaultRequestConfig;
+    private HttpClient5Tracker httpClient5Tracker;
 
-    public OsgiHttpClient5BuilderFactoryImpl(@Reference HttpClient5BuilderConfigurator configurator) {
+    public OsgiHttpClient5BuilderFactoryImpl(@Reference HttpClient5BuilderConfigurator configurator,
+                                             @Reference HttpClient5Tracker httpClient5Tracker) {
         super(configurator);
+        this.httpClient5Tracker = httpClient5Tracker;
     }
 
     @Activate
@@ -47,7 +51,7 @@ public class OsgiHttpClient5BuilderFactoryImpl extends AbstractHttpClient5Builde
             @Override
             public CloseableHttpClient build() {
                 CloseableHttpClient closeableHttpClient = super.build();
-                //todo track this client
+                httpClient5Tracker.track(closeableHttpClient);
                 return closeableHttpClient;
             }
         }.setDefaultRequestConfig(defaultRequestConfig);

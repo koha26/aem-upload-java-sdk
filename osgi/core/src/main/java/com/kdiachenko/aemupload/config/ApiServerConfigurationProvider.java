@@ -3,12 +3,13 @@ package com.kdiachenko.aemupload.config;
 import com.kdia.aemupload.config.ApiServerConfiguration;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
-@Component(service = ApiServerConfiguration.class)
+@Component(service = ApiServerConfiguration.class, configurationPolicy = ConfigurationPolicy.REQUIRE)
 @Designate(ocd = ApiServerConfigurationProvider.Config.class)
 public class ApiServerConfigurationProvider implements ApiServerConfiguration {
 
@@ -39,17 +40,19 @@ public class ApiServerConfigurationProvider implements ApiServerConfiguration {
         return port;
     }
 
-    @ObjectClassDefinition(name = "AEM Upload SDK - Server Configuration",
-            description = "This configuration is used to define the destination server configuration")
+    @ObjectClassDefinition(
+            name = "AEM Upload SDK - API Server Configuration",
+            description = "This configuration is used to define the API server configuration"
+    )
     public @interface Config {
 
-        @AttributeDefinition(name = "Destination server schema")
+        @AttributeDefinition(name = "API server schema")
         String serverSchema() default "https";
 
-        @AttributeDefinition(name = "Destination server host")
+        @AttributeDefinition(name = "API server host")
         String serverHost() default "localhost";
 
-        @AttributeDefinition(name = "Destination server port")
+        @AttributeDefinition(name = "API server port")
         String serverPort() default "4502";
     }
 }

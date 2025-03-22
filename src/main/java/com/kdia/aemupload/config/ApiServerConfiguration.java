@@ -2,7 +2,7 @@ package com.kdia.aemupload.config;
 
 import org.apache.commons.lang3.StringUtils;
 
-public interface ServerConfiguration {
+public interface ApiServerConfiguration {
     String getSchema();
 
     String getHost();

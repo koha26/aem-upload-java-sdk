@@ -1,8 +1,8 @@
-package com.kdia.aemupload.impl;
+package com.kdia.aemupload.api.impl;
 
 import com.kdia.aemupload.api.AssetFolderApi;
-import com.kdia.aemupload.config.ServerConfiguration;
-import com.kdia.aemupload.http.ApiHttpClient;
+import com.kdia.aemupload.config.ApiServerConfiguration;
+import com.kdia.aemupload.http.client.ApiHttpClient;
 import com.kdia.aemupload.http.entity.ApiHttpEntity;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import com.kdia.aemupload.model.AssetApiResponse;
@@ -14,18 +14,18 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
-import static com.kdia.aemupload.http.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
+import static com.kdia.aemupload.http.client.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
 
 @Slf4j
 @AllArgsConstructor
 public class AssetFolderApiImpl implements AssetFolderApi {
 
     private final ApiHttpClient apiHttpClient;
-    private final ServerConfiguration serverConfiguration;
+    private final ApiServerConfiguration apiServerConfiguration;
 
     @Override
     public AssetApiResponse<AssetElement> getFolder(final String folder) {
-        var requestUrl = serverConfiguration.getHostUrl() + ApiPathNormalizer.normalize(folder);
+        var requestUrl = apiServerConfiguration.getHostUrl() + ApiPathNormalizer.normalize(folder);
         ApiHttpResponse<AssetElement> response =
                 apiHttpClient.get(requestUrl, AUTHORIZABLE_API_REQUEST, AssetElement.class);
         return AssetApiResponse.map(response);
@@ -47,7 +47,7 @@ public class AssetFolderApiImpl implements AssetFolderApi {
                                                               final Map<String, String> properties) {
         var formData = Map.of("class", "assetFolder", "properties", properties);
         var httpEntity = ApiHttpEntity.builder().body(formData).build();
-        var requestUrl = serverConfiguration.getHostUrl() + ApiPathNormalizer.normalize(folder);
+        var requestUrl = apiServerConfiguration.getHostUrl() + ApiPathNormalizer.normalize(folder);
         ApiHttpResponse<Void> response =
                 apiHttpClient.post(requestUrl, httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
         return AssetApiResponse.map(response);

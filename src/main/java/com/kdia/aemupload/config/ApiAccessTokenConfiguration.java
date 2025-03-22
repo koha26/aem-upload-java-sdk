@@ -13,6 +13,8 @@ public interface ApiAccessTokenConfiguration {
 
     String getClientSecret();
 
+    String getEmail();
+
     List<String> getMetaScopes();
 
     String getPrivateKeyContent();

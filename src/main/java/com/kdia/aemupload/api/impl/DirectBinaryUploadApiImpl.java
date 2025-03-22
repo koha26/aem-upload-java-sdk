@@ -1,8 +1,8 @@
-package com.kdia.aemupload.impl;
+package com.kdia.aemupload.api.impl;
 
 import com.kdia.aemupload.api.DirectBinaryUploadApi;
-import com.kdia.aemupload.config.ServerConfiguration;
-import com.kdia.aemupload.http.ApiHttpClient;
+import com.kdia.aemupload.config.ApiServerConfiguration;
+import com.kdia.aemupload.http.client.ApiHttpClient;
 import com.kdia.aemupload.http.entity.ApiHttpEntity;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
 import com.kdia.aemupload.model.AssetApiResponse;
@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import static com.kdia.aemupload.http.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
+import static com.kdia.aemupload.http.client.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
 import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
 import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 
@@ -38,7 +38,7 @@ import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
 
     private final ApiHttpClient apiHttpClient;
-    private final ServerConfiguration serverConfiguration;
+    private final ApiServerConfiguration apiServerConfiguration;
 
     @Override
     public AssetApiResponse<InitiateUploadResponse> initiateUpload(final InitiateBinaryUploadOptions request) {
@@ -144,6 +144,6 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
 
     private String buildInitiateUploadUrl(final InitiateBinaryUploadOptions options) {
         var normalizedDamAssetFolder = StringUtils.removeEnd(options.getDamAssetFolder(), "/");
-        return serverConfiguration.getHostUrl() + normalizedDamAssetFolder + ".initiateUpload.json";
+        return apiServerConfiguration.getHostUrl() + normalizedDamAssetFolder + ".initiateUpload.json";
     }
 }

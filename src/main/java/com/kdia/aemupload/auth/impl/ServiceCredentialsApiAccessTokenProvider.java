@@ -4,19 +4,26 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kdia.aemupload.auth.ApiAccessTokenProvider;
 import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
-import com.kdia.aemupload.http.ApiHttpClient;
-import com.kdia.aemupload.http.entity.ApiHttpEntity;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
+import com.kdia.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
+import org.apache.hc.client5.http.classic.methods.HttpPut;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.io.HttpClientResponseHandler;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,20 +37,29 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
+import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 
 @Slf4j
+@RequiredArgsConstructor
 public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenProvider {
 
     private final ApiAccessTokenConfiguration apiAccessTokenConfiguration;
-    private final ApiHttpClient apiHttpClient;
+    private final CloseableHttpClient httpClient;
+    private final HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory;
     private String cachedAccessToken;
     private Date expiration;
 
-    public ServiceCredentialsApiAccessTokenProvider(ApiAccessTokenConfiguration apiAccessTokenConfiguration,
-                                                    ApiHttpClient apiHttpClient) {
-        this.apiAccessTokenConfiguration = apiAccessTokenConfiguration;
-        this.apiHttpClient = apiHttpClient;
+    public ServiceCredentialsApiAccessTokenProvider(ApiAccessTokenConfiguration apiAccessTokenConfiguration) {
+        this(
+                apiAccessTokenConfiguration,
+                HttpClients.createDefault(),
+                ApiHttpClientResponseHandlerFactory.getInstance().createHandler(AccessTokenWrapper.class)
+        );
     }
 
     @Override
@@ -117,17 +133,23 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
     }
 
     private AccessTokenWrapper getAccessToken(final String jwtToken) {
-        var requestUrl = String.format("https://%s/ims/exchange/jwt", apiAccessTokenConfiguration.getImsEndpoint());
-        var headers = Map.of("Content-Type", "application/x-www-form-urlencoded");
-        var httpEntity = ApiHttpEntity.builder()
-                .body(getFormParams(jwtToken))
-                .headers(headers)
-                .build();
-        ApiHttpResponse<AccessTokenWrapper> response = apiHttpClient.post(requestUrl, httpEntity, AccessTokenWrapper.class);
+        try {
+            HttpPut httpPut = new HttpPut(apiAccessTokenConfiguration.getImsEndpoint());
+            httpPut.addHeader(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString());
+            List<NameValuePair> params = getFormParams(jwtToken).entrySet().stream()
+                    .map(entry -> new BasicNameValuePair(entry.getKey(), String.valueOf(entry.getValue())))
+                    .collect(Collectors.toList());
+            httpPut.setEntity(new UrlEncodedFormEntity(params));
 
-        return response.getStatus() < HttpStatus.SC_REDIRECTION && response.getBody() != null
-                ? response.getBody()
-                : null;
+            ApiHttpResponse<AccessTokenWrapper> response = httpClient.execute(httpPut, responseHandlerFactory);
+
+            return response.getStatus() < HttpStatus.SC_REDIRECTION && response.getBody() != null
+                    ? response.getBody()
+                    : null;
+        } catch (IOException e) {
+            log.error("Error while getting access token", e);
+            return null;
+        }
     }
 
     private String getPrivateKeyContentFromFile() throws IOException {

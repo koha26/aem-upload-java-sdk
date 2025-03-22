@@ -1,11 +1,12 @@
-package com.kdia.aemupload.http.impl;
+package com.kdia.aemupload.http.client.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kdia.aemupload.http.ApiHttpClient;
-import com.kdia.aemupload.http.ApiHttpClientResponseHandlerFactory;
+import com.kdia.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
+import com.kdia.aemupload.http.client.ApiHttpClient;
 import com.kdia.aemupload.http.entity.ApiHttpContext;
 import com.kdia.aemupload.http.entity.ApiHttpEntity;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 @Slf4j
+@RequiredArgsConstructor
 public class ApiHttpClientImpl implements ApiHttpClient {
 
     private final CloseableHttpClient httpClient;
@@ -37,14 +39,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     private final ApiHttpClientResponseHandlerFactory responseHandlerFactory;
 
     public ApiHttpClientImpl(CloseableHttpClient httpClient) {
-        this(httpClient, new ObjectMapper(), DefaultApiHttpClientResponseHandlerFactory.INSTANCE);
-    }
-
-    public ApiHttpClientImpl(CloseableHttpClient httpClient, ObjectMapper objectMapper,
-                             ApiHttpClientResponseHandlerFactory responseHandlerFactory) {
-        this.httpClient = httpClient;
-        this.objectMapper = objectMapper;
-        this.responseHandlerFactory = responseHandlerFactory;
+        this(httpClient, new ObjectMapper(), ApiHttpClientResponseHandlerFactory.getInstance());
     }
 
     @Override

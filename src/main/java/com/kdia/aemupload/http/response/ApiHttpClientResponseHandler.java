@@ -1,4 +1,4 @@
-package com.kdia.aemupload.http.impl;
+package com.kdia.aemupload.http.response;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kdia.aemupload.http.entity.ApiHttpResponse;
@@ -16,7 +16,7 @@ import java.util.Map;
 
 @Slf4j
 @AllArgsConstructor
-public class DefaultApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseHandler<ApiHttpResponse<T>> {
+public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseHandler<ApiHttpResponse<T>> {
 
     private final Class<T> responseType;
     private final ObjectMapper objectMapper;

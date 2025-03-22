@@ -1,8 +1,8 @@
-package com.kdia.aemupload.http;
+package com.kdia.aemupload.http.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kdia.aemupload.http.impl.ApiHttpClientImpl;
-import com.kdia.aemupload.http.impl.DefaultApiHttpClientResponseHandlerFactory;
+import com.kdia.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
+import com.kdia.aemupload.http.client.impl.ApiHttpClientImpl;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 
 public class ApiHttpClientBuilder {
@@ -20,13 +20,13 @@ public class ApiHttpClientBuilder {
         return new ApiHttpClientBuilder(httpClient);
     }
 
-    public ApiHttpClientBuilder setObjectMapper(ObjectMapper objectMapper) {
+    public ApiHttpClientBuilder setObjectMapper(final ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
         return this;
     }
 
-    public ApiHttpClientBuilder setResponseHandlerFactory(ApiHttpClientResponseHandlerFactory responseHandlerFactory) {
-        this.responseHandlerFactory = responseHandlerFactory;
+    public ApiHttpClientBuilder setResponseHandlerFactory(final ApiHttpClientResponseHandlerFactory factory) {
+        this.responseHandlerFactory = factory;
         return this;
     }
 
@@ -35,7 +35,7 @@ public class ApiHttpClientBuilder {
             setObjectMapper(DEFAULT_OBJECT_MAPPER);
         }
         if (responseHandlerFactory == null) {
-            setResponseHandlerFactory(DefaultApiHttpClientResponseHandlerFactory.INSTANCE);
+            setResponseHandlerFactory(ApiHttpClientResponseHandlerFactory.getInstance());
         }
         return new ApiHttpClientImpl(httpClient, objectMapper, responseHandlerFactory);
     }

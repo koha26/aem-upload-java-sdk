@@ -6,7 +6,7 @@ public final class ApiPathNormalizer {
     private ApiPathNormalizer() {
     }
 
-    public static String normalize(String path) {
+    public static String normalize(final String path) {
         if (path == null) {
             return null;
         }

@@ -1,4 +1,4 @@
-package com.kdia.aemupload.http;
+package com.kdia.aemupload.http.client;
 
 import com.kdia.aemupload.http.entity.ApiHttpContext;
 import com.kdia.aemupload.http.entity.ApiHttpEntity;

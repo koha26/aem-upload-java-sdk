@@ -2,7 +2,7 @@ package com.kdia.aemupload.auth.impl;
 
 import com.kdia.aemupload.auth.ApiAccessTokenProvider;
 import com.kdia.aemupload.auth.ApiAuthorizationInterceptor;
-import com.kdia.aemupload.http.ApiHttpClient;
+import com.kdia.aemupload.http.client.ApiHttpClient;
 import lombok.AllArgsConstructor;
 import org.apache.hc.core5.http.EntityDetails;
 import org.apache.hc.core5.http.HttpHeaders;

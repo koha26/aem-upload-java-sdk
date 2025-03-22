@@ -1,6 +1,6 @@
 package com.kdiachenko.aemupload.config;
 
-import com.kdia.aemupload.config.ServerConfiguration;
+import com.kdia.aemupload.config.ApiServerConfiguration;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
@@ -8,9 +8,9 @@ import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
-@Component
-@Designate(ocd = ServiceConfigurationProvider.Config.class)
-public class ServiceConfigurationProvider implements ServerConfiguration {
+@Component(service = ApiServerConfiguration.class)
+@Designate(ocd = ApiServerConfigurationProvider.Config.class)
+public class ApiServerConfigurationProvider implements ApiServerConfiguration {
 
     private String schema;
     private String host;
@@ -41,7 +41,7 @@ public class ServiceConfigurationProvider implements ServerConfiguration {
 
     @ObjectClassDefinition(name = "AEM Upload SDK - Server Configuration",
             description = "This configuration is used to define the destination server configuration")
-    public static @interface Config {
+    public @interface Config {
 
         @AttributeDefinition(name = "Destination server schema")
         String serverSchema() default "https";

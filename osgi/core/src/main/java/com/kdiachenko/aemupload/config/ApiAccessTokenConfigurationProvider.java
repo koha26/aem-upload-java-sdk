@@ -10,7 +10,7 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import java.util.Arrays;
 import java.util.List;
 
-@Component
+@Component(service = ApiAccessTokenConfiguration.class)
 @ObjectClassDefinition(name = "AEM Upload SDK - Access Token Configuration")
 public class ApiAccessTokenConfigurationProvider implements ApiAccessTokenConfiguration {
 
@@ -65,6 +65,11 @@ public class ApiAccessTokenConfigurationProvider implements ApiAccessTokenConfig
     @Override
     public String getClientSecret() {
         return clientSecret;
+    }
+
+    @Override
+    public String getEmail() {
+        return email;
     }
 
     @Override

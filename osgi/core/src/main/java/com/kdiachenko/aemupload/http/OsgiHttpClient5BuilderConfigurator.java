@@ -5,6 +5,7 @@ import com.kdia.aemupload.http.DefaultHttpClient5BuilderConfigurator;
 import com.kdia.aemupload.http.HttpClient5BuilderConfigurator;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.osgi.framework.Constants;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -19,6 +20,7 @@ public class OsgiHttpClient5BuilderConfigurator implements HttpClient5BuilderCon
 
     private final HttpClient5BuilderConfigurator configurator;
 
+    @Activate
     public OsgiHttpClient5BuilderConfigurator(@Reference ApiAccessTokenProviderFactory apiAccessTokenProviderFactory) {
         configurator = new DefaultHttpClient5BuilderConfigurator(apiAccessTokenProviderFactory);
     }

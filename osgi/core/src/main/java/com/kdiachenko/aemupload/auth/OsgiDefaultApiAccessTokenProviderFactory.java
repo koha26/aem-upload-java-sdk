@@ -5,6 +5,7 @@ import com.kdia.aemupload.auth.ApiAccessTokenProviderFactory;
 import com.kdia.aemupload.auth.DefaultApiAccessTokenProviderFactory;
 import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
 import org.osgi.framework.Constants;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -19,6 +20,7 @@ public class OsgiDefaultApiAccessTokenProviderFactory implements ApiAccessTokenP
 
     private final ApiAccessTokenProviderFactory apiAccessTokenProviderFactory;
 
+    @Activate
     public OsgiDefaultApiAccessTokenProviderFactory(@Reference ApiAccessTokenConfiguration apiAccessTokenConfiguration) {
         apiAccessTokenProviderFactory = new DefaultApiAccessTokenProviderFactory(apiAccessTokenConfiguration);
     }

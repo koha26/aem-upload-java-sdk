@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Component(service = ApiAccessTokenConfiguration.class, configurationPolicy = ConfigurationPolicy.REQUIRE)
-@Designate(ocd = ApiAccessTokenConfiguration.class)
+@Designate(ocd = ApiAccessTokenConfigurationProvider.Config.class)
 public class ApiAccessTokenConfigurationProvider implements ApiAccessTokenConfiguration {
 
     private String localDevelopmentAccessToken;

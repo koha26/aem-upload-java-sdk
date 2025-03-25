@@ -28,6 +28,7 @@ public class SdkApiProviderImpl implements SdkApiProvider {
     private AssetFolderApi assetFolderApi;
     private AssetMetadataApi assetMetadataApi;
 
+    @Activate
     public SdkApiProviderImpl(@Reference HttpClient5BuilderFactory httpClient5BuilderFactory,
                               @Reference ApiServerConfiguration apiServerConfiguration) {
         this.httpClient5BuilderFactory = httpClient5BuilderFactory;

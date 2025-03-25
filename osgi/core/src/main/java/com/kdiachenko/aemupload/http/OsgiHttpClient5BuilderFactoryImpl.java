@@ -31,6 +31,7 @@ public class OsgiHttpClient5BuilderFactoryImpl extends AbstractHttpClient5Builde
     private RequestConfig defaultRequestConfig;
     private HttpClient5Tracker httpClient5Tracker;
 
+    @Activate
     public OsgiHttpClient5BuilderFactoryImpl(@Reference HttpClient5BuilderConfigurator configurator,
                                              @Reference HttpClient5Tracker httpClient5Tracker) {
         super(configurator);

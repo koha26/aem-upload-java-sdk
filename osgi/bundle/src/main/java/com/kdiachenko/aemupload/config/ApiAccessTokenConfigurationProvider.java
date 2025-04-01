@@ -1,6 +1,7 @@
 package com.kdiachenko.aemupload.config;
 
 import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
+import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -12,7 +13,13 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import java.util.Arrays;
 import java.util.List;
 
-@Component(service = ApiAccessTokenConfiguration.class, configurationPolicy = ConfigurationPolicy.REQUIRE)
+@Component(
+        service = ApiAccessTokenConfiguration.class,
+        configurationPolicy = ConfigurationPolicy.REQUIRE,
+        properties = {
+                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK API Access Token Configuration",
+        }
+)
 @Designate(ocd = ApiAccessTokenConfigurationProvider.Config.class)
 public class ApiAccessTokenConfigurationProvider implements ApiAccessTokenConfiguration {
 

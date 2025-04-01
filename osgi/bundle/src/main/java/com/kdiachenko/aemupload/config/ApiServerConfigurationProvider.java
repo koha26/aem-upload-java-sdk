@@ -1,6 +1,7 @@
 package com.kdiachenko.aemupload.config;
 
 import com.kdia.aemupload.config.ApiServerConfiguration;
+import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -9,7 +10,13 @@ import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
-@Component(service = ApiServerConfiguration.class, configurationPolicy = ConfigurationPolicy.REQUIRE)
+@Component(
+        service = ApiServerConfiguration.class,
+        configurationPolicy = ConfigurationPolicy.REQUIRE,
+        properties = {
+                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK API Server Configuration",
+        }
+)
 @Designate(ocd = ApiServerConfigurationProvider.Config.class)
 public class ApiServerConfigurationProvider implements ApiServerConfiguration {
 

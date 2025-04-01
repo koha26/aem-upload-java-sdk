@@ -23,7 +23,7 @@
     <!-- ====================================================================== -->
     <parent>
         <groupId>com.kdiachenko</groupId>
-        <artifactId>aem-upload-java-sdk-extension</artifactId>
+        <artifactId>aem-upload-java-sdk-osgi</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
@@ -31,10 +31,10 @@
     <!-- ====================================================================== -->
     <!-- P R O J E C T  D E S C R I P T I O N                                   -->
     <!-- ====================================================================== -->
-    <artifactId>aem-upload-java-sdk-extension.all</artifactId>
+    <artifactId>aem-upload-java-sdk-osgi.package</artifactId>
     <packaging>content-package</packaging>
-    <name>AEM Upload SDK extension - All</name>
-    <description>All content package for My Site</description>
+    <name>AEM Upload SDK OSGi - Package</name>
+    <description>Container package of the AEM Upload SDK containing the bundle.</description>
 
     <!-- ====================================================================== -->
     <!-- B U I L D   D E F I N I T I O N                                        -->
@@ -56,7 +56,7 @@
                     <embeddeds>
                         <embedded>
                             <groupId>com.kdiachenko</groupId>
-                            <artifactId>aem-upload-java-sdk-extension.core</artifactId>
+                            <artifactId>aem-upload-java-sdk-osgi.bundle</artifactId>
                             <target>/apps/aem-upload-java-sdk-packages/application/install</target>
                         </embedded>
                     </embeddeds>

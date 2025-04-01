@@ -3,6 +3,7 @@ package com.kdiachenko.aemupload.http.impl;
 import com.kdiachenko.aemupload.http.HttpClient5Tracker;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 
@@ -13,7 +14,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
-@Component
+@Component(
+        properties = {
+                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK HTTP Client 5 Tracker",
+                Constants.SERVICE_RANKING + ":Integer=10"
+        }
+)
 public class HttpClient5TrackerImpl implements HttpClient5Tracker {
     private final List<WeakReference<CloseableHttpClient>> trackedHttpClients = new ArrayList<>();
 

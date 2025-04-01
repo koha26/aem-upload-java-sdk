@@ -12,8 +12,8 @@ import org.osgi.service.component.annotations.Reference;
 @Component(
         service = HttpClient5BuilderConfigurator.class,
         properties = {
-                Constants.SERVICE_DESCRIPTION + "=" + "AEM Upload SDK - Default HTTP Client 5 Builder Configurator",
-                Constants.SERVICE_RANKING + "=" + "10"
+                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK Default HTTP Client 5 Builder Configurator",
+                Constants.SERVICE_RANKING + ":Integer=10"
         }
 )
 public class OsgiHttpClient5BuilderConfigurator implements HttpClient5BuilderConfigurator {

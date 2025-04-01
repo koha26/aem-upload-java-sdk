@@ -20,15 +20,18 @@
         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.kdiachenko</groupId>
-    <artifactId>aem-upload-java-sdk-extension</artifactId>
+    <artifactId>aem-upload-java-sdk-osgi</artifactId>
     <packaging>pom</packaging>
     <version>1.0.0-SNAPSHOT</version>
-    <name>AEM Upload SDK extension</name>
-    <description>My Site</description>
+
+    <name>AEM Upload SDK - OSGI</name>
+    <description>This is OSGi wrapper for AEM Upload Java SDK.</description>
+
     <modules>
-        <module>all</module>
-        <module>core</module>
+        <module>package</module>
+        <module>bundle</module>
     </modules>
+
     <properties>
         <aem.host>localhost</aem.host>
         <aem.port>4502</aem.port>
@@ -39,12 +42,11 @@
         <vault.user>admin</vault.user>
         <vault.password>admin</vault.password>
         <core.wcm.components.version>2.26.0</core.wcm.components.version>
-        <bnd.version>5.1.2</bnd.version>
+        <bnd.version>6.4.0</bnd.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <aem.sdk.api>2025.3.19823.20250304T101418Z-250200</aem.sdk.api>
         <aemanalyser.version>1.4.10</aemanalyser.version>
-        <componentGroupName>My Site</componentGroupName>
     </properties>
     <build>
         <plugins>
@@ -121,8 +123,6 @@
                             <configuration>
                                 <bnd>
                                     <![CDATA[
-Bundle-Category: ${componentGroupName}
-
 # export all versioned packages except for conditional ones (https://github.com/bndtools/bnd/issues/3721#issuecomment-579026778)
 -exportcontents: ${removeall;${packages;VERSIONED};${packages;CONDITIONAL}}
 
@@ -461,10 +461,39 @@ Bundle-DocURL:
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.adobe.aem</groupId>
-                <artifactId>aem-sdk-api</artifactId>
-                <version>${aem.sdk.api}</version>
-                <scope>provided</scope>
+                <groupId>org.osgi</groupId>
+                <artifactId>osgi.core</artifactId>
+                <version>8.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.annotation.versioning</artifactId>
+                <version>1.1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.annotation.bundle</artifactId>
+                <version>1.1.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.service.metatype.annotations</artifactId>
+                <version>1.4.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.service.component.annotations</artifactId>
+                <version>1.5.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.service.http.whiteboard</artifactId>
+                <version>1.1.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.sling</groupId>
+                <artifactId>org.apache.sling.servlets.annotations</artifactId>
+                <version>1.2.6</version>
             </dependency>
             <!-- Testing -->
             <dependency>

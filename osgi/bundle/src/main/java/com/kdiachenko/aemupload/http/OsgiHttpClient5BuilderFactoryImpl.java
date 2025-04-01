@@ -21,15 +21,15 @@ import java.util.concurrent.TimeUnit;
 @Component(
         service = HttpClient5BuilderFactory.class,
         properties = {
-                Constants.SERVICE_DESCRIPTION + "=" + "AEM Upload SDK - HTTP Client 5 Builder Factory",
-                Constants.SERVICE_RANKING + "=" + "10"
+                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK HTTP Client 5 Builder Factory",
+                Constants.SERVICE_RANKING + ":Integer=10"
         }
 )
 @Designate(ocd = OsgiHttpClient5BuilderFactoryImpl.Config.class)
 public class OsgiHttpClient5BuilderFactoryImpl extends AbstractHttpClient5BuilderFactoryImpl {
 
+    private final HttpClient5Tracker httpClient5Tracker;
     private RequestConfig defaultRequestConfig;
-    private HttpClient5Tracker httpClient5Tracker;
 
     @Activate
     public OsgiHttpClient5BuilderFactoryImpl(@Reference HttpClient5BuilderConfigurator configurator,

@@ -19,13 +19,13 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.kdiachenko</groupId>
-        <artifactId>aem-upload-java-sdk-extension</artifactId>
+        <artifactId>aem-upload-java-sdk-osgi</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-    <artifactId>aem-upload-java-sdk-extension.core</artifactId>
-    <name>AEM Upload SDK extension - Core</name>
-    <description>Core bundle for My Site</description>
+    <artifactId>aem-upload-java-sdk-osgi.bundle</artifactId>
+    <name>AEM Upload SDK OSGi - Bundle</name>
+    <description>Bundle with adapter for AEM Upload SDK.</description>
     <build>
         <plugins>
             <plugin>
@@ -84,8 +84,32 @@ Import-Package: !jdk.net,!org.conscrypt,!org.brotli.dec,javax.annotation;version
 
     <dependencies>
         <dependency>
-            <groupId>com.adobe.aem</groupId>
-            <artifactId>aem-sdk-api</artifactId>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.annotation.versioning</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.annotation.bundle</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.metatype.annotations</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.http.whiteboard</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.servlets.annotations</artifactId>
         </dependency>
 
         <!-- Testing -->

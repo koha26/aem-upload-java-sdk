@@ -18,12 +18,21 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * OSGi service that implements the {@link HttpClient5BuilderFactory} interface.
+ * This class creates and configures an {@link HttpClientBuilder} instance.
+ * <p>
+ * The configuration is done using a delegate configurator and a tracker for managing
+ * {@link CloseableHttpClient} instances.
+ * </p>
+ *
+ * <p>This class uses the OSGi configuration to define the parameters for the default request configuration.</p>
+ *
+ * @author kostiantyn.diachenko
+ */
 @Component(
         service = HttpClient5BuilderFactory.class,
-        properties = {
-                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK HTTP Client 5 Builder Factory",
-                Constants.SERVICE_RANKING + ":Integer=10"
-        }
+        properties = Constants.SERVICE_RANKING + ":Integer=10"
 )
 @Designate(ocd = OsgiHttpClient5BuilderFactoryImpl.Config.class)
 public class OsgiHttpClient5BuilderFactoryImpl extends AbstractHttpClient5BuilderFactoryImpl {
@@ -56,6 +65,10 @@ public class OsgiHttpClient5BuilderFactoryImpl extends AbstractHttpClient5Builde
                 return closeableHttpClient;
             }
         }.setDefaultRequestConfig(defaultRequestConfig);
+    }
+
+    RequestConfig getDefaultRequestConfig() {
+        return defaultRequestConfig;
     }
 
     @Retention(RetentionPolicy.RUNTIME)

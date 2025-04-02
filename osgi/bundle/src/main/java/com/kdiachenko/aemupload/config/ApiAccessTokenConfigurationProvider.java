@@ -1,7 +1,6 @@
 package com.kdiachenko.aemupload.config;
 
 import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
-import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -13,12 +12,34 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * OSGi service that provides the configuration for API access token retrieval.
+ * This implementation uses the OSGi configuration to define the parameters.
+ *
+ * <p>The configuration parameters include:</p>
+ * <ul>
+ *   <li>Local development access token</li>
+ *   <li>IMS endpoint</li>
+ *   <li>Meta scopes</li>
+ *   <li>Client ID</li>
+ *   <li>Client secret</li>
+ *   <li>Email</li>
+ *   <li>Configuration ID</li>
+ *   <li>Organization ID</li>
+ *   <li>Private key file path</li>
+ *   <li>Private key content</li>
+ *   <li>Access token life time (in secs)</li>
+ * </ul>
+ *
+ * <p>The configuration is required for the service to be active, as specified by the
+ * {@link ConfigurationPolicy#REQUIRE} policy. That is why this configuration is mandatory for SDK initialization.</p>
+ *
+ * @author kostiantyn.diachenko
+ * @see ApiAccessTokenConfiguration
+ */
 @Component(
         service = ApiAccessTokenConfiguration.class,
-        configurationPolicy = ConfigurationPolicy.REQUIRE,
-        properties = {
-                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK API Access Token Configuration",
-        }
+        configurationPolicy = ConfigurationPolicy.REQUIRE
 )
 @Designate(ocd = ApiAccessTokenConfigurationProvider.Config.class)
 public class ApiAccessTokenConfigurationProvider implements ApiAccessTokenConfiguration {
@@ -48,7 +69,7 @@ public class ApiAccessTokenConfigurationProvider implements ApiAccessTokenConfig
         org = config.org();
         privateKeyFilePath = config.privateKeyFilePath();
         privateKeyContent = config.privateKeyContent();
-        tokenLifeTimeInSec = Integer.parseInt(config.tokenLifeTimeInSec());
+        tokenLifeTimeInSec = config.tokenLifeTimeInSec();
     }
 
     @Override
@@ -106,14 +127,19 @@ public class ApiAccessTokenConfigurationProvider implements ApiAccessTokenConfig
         return localDevelopmentAccessToken;
     }
 
-    @ObjectClassDefinition(name = "AEM Upload SDK - API Access Token Configuration",
-            description = "This configuration is used to define the API access token retrieval parameters.")
+    @ObjectClassDefinition(
+            name = "AEM Upload SDK - API Access Token Configuration",
+            description = "This configuration is used to define the API access token retrieval parameters."
+    )
     public @interface Config {
 
         @AttributeDefinition(name = "Local development access token")
         String localDevelopmentAccessToken();
 
-        @AttributeDefinition(name = "IMS endpoint (including host)")
+        @AttributeDefinition(
+                name = "IMS endpoint (including host)",
+                description = "Example: https://ims-code.adobelogin.com/ims/exchange/jwt"
+        )
         String imsEndpoint();
 
         @AttributeDefinition(name = "Meta scopes")
@@ -144,6 +170,6 @@ public class ApiAccessTokenConfigurationProvider implements ApiAccessTokenConfig
         String privateKeyContent();
 
         @AttributeDefinition(name = "Access token life time (in secs)")
-        String tokenLifeTimeInSec();
+        int tokenLifeTimeInSec() default 86400;
     }
 }

@@ -1,7 +1,6 @@
 package com.kdiachenko.aemupload.config;
 
 import com.kdia.aemupload.config.ApiServerConfiguration;
-import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -10,12 +9,26 @@ import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
+/**
+ * OSGi service that provides the configuration for the server of API.
+ * This implementation uses the OSGi configuration to define the parameters.
+ *
+ * <p>The configuration parameters include:</p>
+ * <ul>
+ *   <li>API server schema</li>
+ *   <li>API server host</li>
+ *   <li>API server port</li>
+ * </ul>
+ *
+ * <p>The configuration is required for the service to be active, as specified by the
+ * {@link ConfigurationPolicy#REQUIRE} policy. That's why this configuration is mandatory for SDK initialization.</p>
+ *
+ * @author kostiantyn.diachenko
+ * @see ApiServerConfiguration
+ */
 @Component(
         service = ApiServerConfiguration.class,
-        configurationPolicy = ConfigurationPolicy.REQUIRE,
-        properties = {
-                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK API Server Configuration",
-        }
+        configurationPolicy = ConfigurationPolicy.REQUIRE
 )
 @Designate(ocd = ApiServerConfigurationProvider.Config.class)
 public class ApiServerConfigurationProvider implements ApiServerConfiguration {

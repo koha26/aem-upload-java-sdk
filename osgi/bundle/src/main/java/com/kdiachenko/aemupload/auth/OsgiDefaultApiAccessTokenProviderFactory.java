@@ -9,12 +9,15 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
+/**
+ * OSGi service that provides a factory for creating instances of {@link ApiAccessTokenProvider}.
+ * This implementation uses the {@link DefaultApiAccessTokenProviderFactory} to create the provider.
+ *
+ * @author kostiantyn.diachenko
+ */
 @Component(
         service = ApiAccessTokenProviderFactory.class,
-        properties = {
-                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK Default API Access Token Provider Factory",
-                Constants.SERVICE_RANKING + ":Integer=10"
-        }
+        properties = Constants.SERVICE_RANKING + ":Integer=10"
 )
 public class OsgiDefaultApiAccessTokenProviderFactory implements ApiAccessTokenProviderFactory {
 

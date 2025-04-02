@@ -12,12 +12,16 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
+/**
+ * OSGi service that implements the {@link SdkApiProvider} interface.
+ * This implementation provides instances of various SDK APIs using {@link DefaultSdkApiFactory}.
+ * <p>
+ *
+ * @author kostiantyn.diachenko
+ */
 @Component(
         service = SdkApiProvider.class,
-        properties = {
-                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK API provider",
-                Constants.SERVICE_RANKING + ":Integer=10"
-        }
+        properties = Constants.SERVICE_RANKING + ":Integer=10"
 )
 public class SdkApiProviderImpl implements SdkApiProvider {
 

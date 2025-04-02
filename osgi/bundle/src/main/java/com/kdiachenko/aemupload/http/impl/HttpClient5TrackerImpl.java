@@ -13,13 +13,20 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * OSGi service implementation of the {@link HttpClient5Tracker} interface that tracks and manages
+ * {@link CloseableHttpClient} instances.
+ *
+ * <p>This class uses a list of weak references to track HTTP clients and
+ * close all tracked clients when the service is deactivated.</p>
+ *
+ * <p>This mechanism of closing all HTTP clients on service deactivation
+ * helps prevent memory leaks, particularly in AEMaaCS.</p>
+ *
+ * @author kostiantyn.diachenko
+ */
 @Slf4j
-@Component(
-        properties = {
-                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK HTTP Client 5 Tracker",
-                Constants.SERVICE_RANKING + ":Integer=10"
-        }
-)
+@Component(service = HttpClient5Tracker.class, properties = Constants.SERVICE_RANKING + ":Integer=10")
 public class HttpClient5TrackerImpl implements HttpClient5Tracker {
     private final List<WeakReference<CloseableHttpClient>> trackedHttpClients = new ArrayList<>();
 
@@ -40,6 +47,10 @@ public class HttpClient5TrackerImpl implements HttpClient5Tracker {
         }
 
         trackedHttpClients.clear();
+    }
+
+    List<WeakReference<CloseableHttpClient>> getTrackedHttpClients() {
+        return trackedHttpClients;
     }
 
     private void closeQuietly(final Closeable closeable) {

@@ -9,12 +9,17 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
+/**
+ * OSGi service that implements the {@link HttpClient5BuilderConfigurator} interface.
+ * This class configures an {@link HttpClientBuilder} using a delegate configurator.
+ * <p>
+ * In this particular case, the delegate configurator is an instance of the {@link DefaultHttpClient5BuilderConfigurator}.
+ *
+ * @author kostiantyn.diachenko
+ */
 @Component(
         service = HttpClient5BuilderConfigurator.class,
-        properties = {
-                //Constants.SERVICE_DESCRIPTION + "=AEM Upload SDK Default HTTP Client 5 Builder Configurator",
-                Constants.SERVICE_RANKING + ":Integer=10"
-        }
+        properties = Constants.SERVICE_RANKING + ":Integer=10"
 )
 public class OsgiHttpClient5BuilderConfigurator implements HttpClient5BuilderConfigurator {
 

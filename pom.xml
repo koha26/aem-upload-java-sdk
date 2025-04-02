@@ -2,75 +2,81 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-   <modelVersion>4.0.0</modelVersion>
-   <groupId>com.kdiachenko</groupId>
-   <artifactId>aem-upload-java-sdk</artifactId>
-   <version>0.0.1-SNAPSHOT</version>
-   <packaging>jar</packaging>
-   <name>AEM Upload Java SDK</name>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.kdiachenko</groupId>
+    <artifactId>aem-upload-java-sdk</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>AEM Upload SDK</name>
 
-   <properties>
-      <java.version>11</java.version>
-      <jsonwebtoken.version>0.9.1</jsonwebtoken.version>
-   </properties>
+    <properties>
+        <java.version>11</java.version>
+        <jsonwebtoken.version>0.9.1</jsonwebtoken.version>
+        <jackson-databind.version>2.18.2</jackson-databind.version>
+        <lombok.version>1.18.36</lombok.version>
+        <commons-lang3.version>3.13.0</commons-lang3.version>
+        <slf4j-api.version>2.0.7</slf4j-api.version>
+        <slf4j-impl.logback.version>1.4.12</slf4j-impl.logback.version>
+        <httpclient5.version>5.4.1</httpclient5.version>
+    </properties>
 
-   <dependencies>
-      <dependency>
-         <groupId>org.projectlombok</groupId>
-         <artifactId>lombok</artifactId>
-         <version>1.18.36</version>
-      </dependency>
-      <dependency>
-         <groupId>org.apache.commons</groupId>
-         <artifactId>commons-lang3</artifactId>
-         <version>3.13.0</version>
-      </dependency>
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons-lang3.version}</version>
+        </dependency>
 
-      <!-- SLF4J API -->
-      <dependency>
-         <groupId>org.slf4j</groupId>
-         <artifactId>slf4j-api</artifactId>
-         <version>2.0.7</version>
-      </dependency>
+        <!-- SLF4J API -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j-api.version}</version>
+        </dependency>
 
-      <!-- SLF4J Implementation (Logback as an example) -->
-      <dependency>
-         <groupId>ch.qos.logback</groupId>
-         <artifactId>logback-classic</artifactId>
-         <version>1.4.7</version>
-      </dependency>
+        <!-- SLF4J Implementation (Logback as an example) -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${slf4j-impl.logback.version}</version>
+        </dependency>
 
-      <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents.client5/httpclient5 -->
-      <dependency>
-         <groupId>org.apache.httpcomponents.client5</groupId>
-         <artifactId>httpclient5</artifactId>
-         <version>5.4.1</version>
-      </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents.client5/httpclient5 -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>${httpclient5.version}</version>
+        </dependency>
 
-      <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
-      <dependency>
-         <groupId>com.fasterxml.jackson.core</groupId>
-         <artifactId>jackson-databind</artifactId>
-         <version>2.18.2</version>
-      </dependency>
+        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson-databind.version}</version>
+        </dependency>
 
-      <dependency>
-         <groupId>io.jsonwebtoken</groupId>
-         <artifactId>jjwt</artifactId>
-         <version>${jsonwebtoken.version}</version>
-      </dependency>
-   </dependencies>
-   <build>
-      <plugins>
-         <!-- Maven Compiler Plugin -->
-         <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-               <source>11</source>
-               <target>11</target>
-            </configuration>
-         </plugin>
-      </plugins>
-   </build>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt</artifactId>
+            <version>${jsonwebtoken.version}</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <!-- Maven Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>11</source>
+                    <target>11</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

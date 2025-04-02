@@ -41,13 +41,15 @@
         <sling.password>admin</sling.password>
         <vault.user>admin</vault.user>
         <vault.password>admin</vault.password>
-        <core.wcm.components.version>2.26.0</core.wcm.components.version>
         <bnd.version>6.4.0</bnd.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <aem.sdk.api>2025.3.19823.20250304T101418Z-250200</aem.sdk.api>
         <aemanalyser.version>1.4.10</aemanalyser.version>
+        <aem-upload-sdk.version>1.0.0-SNAPSHOT</aem-upload-sdk.version>
+        <httpclient5.version>5.4.1</httpclient5.version>
+        <httpcore5.version>5.3.1</httpcore5.version>
     </properties>
+
     <build>
         <plugins>
             <!-- Maven Release Plugin -->
@@ -485,16 +487,7 @@ Bundle-DocURL:
                 <artifactId>org.osgi.service.component.annotations</artifactId>
                 <version>1.5.0</version>
             </dependency>
-            <dependency>
-                <groupId>org.osgi</groupId>
-                <artifactId>org.osgi.service.http.whiteboard</artifactId>
-                <version>1.1.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.sling</groupId>
-                <artifactId>org.apache.sling.servlets.annotations</artifactId>
-                <version>1.2.6</version>
-            </dependency>
+
             <!-- Testing -->
             <dependency>
                 <groupId>org.junit</groupId>
@@ -534,27 +527,9 @@ Bundle-DocURL:
                 </exclusions>
             </dependency>
             <dependency>
-                <groupId>commons-collections</groupId>
-                <artifactId>commons-collections</artifactId>
-                <version>3.2.2</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.adobe.cq</groupId>
-                <artifactId>core.wcm.components.testing.aem-mock-plugin</artifactId>
-                <version>${core.wcm.components.version}</version>
-                <scope>test</scope>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.apache.sling</groupId>
-                        <artifactId>org.apache.sling.scripting.api</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
                 <groupId>com.kdiachenko</groupId>
                 <artifactId>aem-upload-java-sdk</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${aem-upload-sdk.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

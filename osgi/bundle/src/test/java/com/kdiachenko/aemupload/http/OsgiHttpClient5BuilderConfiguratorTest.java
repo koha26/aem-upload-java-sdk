@@ -1,7 +1,6 @@
 package com.kdiachenko.aemupload.http;
 
-import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
-import com.kdia.aemupload.http.HttpClient5BuilderConfigurator;
+import com.kdiachenko.aemupload.config.ApiAccessTokenConfiguration;
 import com.kdiachenko.aemupload.auth.OsgiDefaultApiAccessTokenProviderFactory;
 import com.kdiachenko.aemupload.stubs.ApiAccessTokenConfigurationStub;
 import io.wcm.testing.mock.aem.junit5.AemContextExtension;

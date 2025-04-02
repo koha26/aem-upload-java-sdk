@@ -1,11 +1,11 @@
 package com.kdiachenko.aemupload.provider.impl;
 
-import com.kdia.aemupload.DefaultSdkApiFactory;
-import com.kdia.aemupload.api.AssetFolderApi;
-import com.kdia.aemupload.api.AssetMetadataApi;
-import com.kdia.aemupload.api.DirectBinaryUploadApi;
-import com.kdia.aemupload.config.ApiServerConfiguration;
-import com.kdia.aemupload.http.HttpClient5BuilderFactory;
+import com.kdiachenko.aemupload.DefaultSdkApiFactory;
+import com.kdiachenko.aemupload.api.AssetFolderApi;
+import com.kdiachenko.aemupload.api.AssetMetadataApi;
+import com.kdiachenko.aemupload.api.DirectBinaryUploadApi;
+import com.kdiachenko.aemupload.config.ApiServerConfiguration;
+import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
 import com.kdiachenko.aemupload.provider.SdkApiProvider;
 import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;

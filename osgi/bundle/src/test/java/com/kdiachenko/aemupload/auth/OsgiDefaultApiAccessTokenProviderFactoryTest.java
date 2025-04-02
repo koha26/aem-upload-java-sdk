@@ -1,7 +1,6 @@
 package com.kdiachenko.aemupload.auth;
 
-import com.kdia.aemupload.auth.ApiAccessTokenProviderFactory;
-import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
+import com.kdiachenko.aemupload.config.ApiAccessTokenConfiguration;
 import com.kdiachenko.aemupload.stubs.ApiAccessTokenConfigurationStub;
 import io.wcm.testing.mock.aem.junit5.AemContextExtension;
 import org.apache.sling.testing.mock.osgi.context.OsgiContextImpl;

@@ -1,6 +1,6 @@
 package com.kdiachenko.aemupload.stubs;
 
-import com.kdia.aemupload.config.ApiServerConfiguration;
+import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import lombok.Builder;
 import lombok.Getter;
 

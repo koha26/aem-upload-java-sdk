@@ -1,7 +1,5 @@
 package com.kdiachenko.aemupload.http;
 
-import com.kdia.aemupload.http.HttpClient5BuilderConfigurator;
-import com.kdia.aemupload.http.HttpClient5BuilderFactory;
 import com.kdiachenko.aemupload.stubs.HttpClient5BuilderConfiguratorStub;
 import com.kdiachenko.aemupload.stubs.HttpClient5TrackerStub;
 import io.wcm.testing.mock.aem.junit5.AemContextExtension;

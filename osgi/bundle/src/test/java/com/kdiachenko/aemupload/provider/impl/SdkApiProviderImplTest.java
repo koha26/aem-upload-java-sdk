@@ -1,7 +1,7 @@
 package com.kdiachenko.aemupload.provider.impl;
 
-import com.kdia.aemupload.config.ApiServerConfiguration;
-import com.kdia.aemupload.http.HttpClient5BuilderFactory;
+import com.kdiachenko.aemupload.config.ApiServerConfiguration;
+import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
 import com.kdiachenko.aemupload.provider.SdkApiProvider;
 import com.kdiachenko.aemupload.stubs.ApiServerConfigurationStub;
 import io.wcm.testing.mock.aem.junit5.AemContextExtension;

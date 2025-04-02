@@ -1,6 +1,5 @@
 package com.kdiachenko.aemupload.config;
 
-import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;

@@ -1,8 +1,5 @@
 package com.kdiachenko.aemupload.http;
 
-import com.kdia.aemupload.http.AbstractHttpClient5BuilderFactoryImpl;
-import com.kdia.aemupload.http.HttpClient5BuilderConfigurator;
-import com.kdia.aemupload.http.HttpClient5BuilderFactory;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;

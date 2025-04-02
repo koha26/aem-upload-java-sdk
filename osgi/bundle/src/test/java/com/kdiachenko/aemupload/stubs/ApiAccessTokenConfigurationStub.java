@@ -1,6 +1,6 @@
 package com.kdiachenko.aemupload.stubs;
 
-import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
+import com.kdiachenko.aemupload.config.ApiAccessTokenConfiguration;
 import lombok.Builder;
 import lombok.Getter;
 

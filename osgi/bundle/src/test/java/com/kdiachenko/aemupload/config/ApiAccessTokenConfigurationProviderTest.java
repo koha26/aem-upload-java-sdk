@@ -1,6 +1,5 @@
 package com.kdiachenko.aemupload.config;
 
-import com.kdia.aemupload.config.ApiAccessTokenConfiguration;
 import io.wcm.testing.mock.aem.junit5.AemContextExtension;
 import org.apache.sling.testing.mock.osgi.context.OsgiContextImpl;
 import org.junit.jupiter.api.Test;

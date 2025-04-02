@@ -1,8 +1,6 @@
 package com.kdiachenko.aemupload.http;
 
-import com.kdia.aemupload.auth.ApiAccessTokenProviderFactory;
-import com.kdia.aemupload.http.DefaultHttpClient5BuilderConfigurator;
-import com.kdia.aemupload.http.HttpClient5BuilderConfigurator;
+import com.kdiachenko.aemupload.auth.ApiAccessTokenProviderFactory;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;

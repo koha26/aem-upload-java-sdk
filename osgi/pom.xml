@@ -27,6 +27,15 @@
     <name>AEM Upload SDK - OSGI</name>
     <description>This is OSGi wrapper for AEM Upload Java SDK.</description>
 
+    <url>https://github.com/koha26/aem-upload-java-sdk</url>
+    <developers>
+        <developer>
+            <name>Kostiantyn Diachenko</name>
+            <email>konstantyn.diachenko@gmail.com</email>
+            <id>konstantyn.diachenko@gmail.com</id>
+        </developer>
+    </developers>
+
     <modules>
         <module>package</module>
         <module>bundle</module>
@@ -528,7 +537,7 @@ Bundle-DocURL:
             </dependency>
             <dependency>
                 <groupId>com.kdiachenko</groupId>
-                <artifactId>aem-upload-java-sdk</artifactId>
+                <artifactId>aem-upload-sdk</artifactId>
                 <version>${aem-upload-sdk.version}</version>
             </dependency>
         </dependencies>

@@ -4,10 +4,19 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.kdiachenko</groupId>
-    <artifactId>aem-upload-java-sdk</artifactId>
+    <artifactId>aem-upload-sdk</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>AEM Upload SDK</name>
+
+    <url>https://github.com/koha26/aem-upload-java-sdk</url>
+    <developers>
+        <developer>
+            <name>Kostiantyn Diachenko</name>
+            <email>konstantyn.diachenko@gmail.com</email>
+            <id>konstantyn.diachenko@gmail.com</id>
+        </developer>
+    </developers>
 
     <properties>
         <java.version>11</java.version>

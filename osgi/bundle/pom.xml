@@ -134,7 +134,7 @@ Import-Package: !jdk.net,!org.conscrypt,!org.brotli.dec,javax.annotation;version
         <!-- AEM Upload SDK -->
         <dependency>
             <groupId>com.kdiachenko</groupId>
-            <artifactId>aem-upload-java-sdk</artifactId>
+            <artifactId>aem-upload-sdk</artifactId>
         </dependency>
     </dependencies>
 </project>

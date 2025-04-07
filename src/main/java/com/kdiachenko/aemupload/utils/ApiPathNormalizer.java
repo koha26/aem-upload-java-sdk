@@ -10,7 +10,8 @@ public final class ApiPathNormalizer {
         if (path == null) {
             return null;
         }
-        var normalizedPath = StringUtils.removeStart(path, "/content/dam");
+        String normalizedPath = StringUtils.removeStart(path, "/content/dam/");
+        normalizedPath = StringUtils.removeStart(normalizedPath, "/");
         return "/api/assets/" + normalizedPath;
     }
 }

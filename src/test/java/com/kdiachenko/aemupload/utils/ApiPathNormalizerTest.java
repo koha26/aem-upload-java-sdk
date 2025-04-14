@@ -12,14 +12,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ApiPathNormalizerTest {
 
     @ParameterizedTest(name = "[{index}] input: \"{0}\" → expected: \"{1}\"")
-    @MethodSource("pathNormalizationProvider")
+    @MethodSource("pathNormalizationVariantProvider")
     @DisplayName("should normalize paths correctly")
     void shouldNormalizePaths(String input, String expected) {
         String result = ApiPathNormalizer.normalize(input);
         assertThat(result).isEqualTo(expected);
     }
 
-    private static Stream<Arguments> pathNormalizationProvider() {
+    private static Stream<Arguments> pathNormalizationVariantProvider() {
         return Stream.of(
                 Arguments.of(null, null),
                 Arguments.of("", "/api/assets/"),

@@ -32,7 +32,7 @@ public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseH
             return ApiHttpResponse.<T>builder()
                     .body(body)
                     .build();
-        } catch (final ParseException ex) {
+        } catch (final Exception ex) {
             log.info("Error parsing response", ex);
             throw new IOException(ex);
         }
@@ -54,7 +54,7 @@ public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseH
                         .build();
             }
             return entity == null ? null : handleEntityWithCode(entity, response);
-        } catch (final ParseException ex) {
+        } catch (final Exception ex) {
             log.info("Error parsing response", ex);
             throw new IOException(ex);
         }

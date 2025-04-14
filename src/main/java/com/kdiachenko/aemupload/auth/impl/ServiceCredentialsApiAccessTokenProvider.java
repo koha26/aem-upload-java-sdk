@@ -9,10 +9,13 @@ import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactor
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
@@ -39,6 +42,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
@@ -51,7 +55,11 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
     private final ApiAccessTokenConfiguration apiAccessTokenConfiguration;
     private final CloseableHttpClient httpClient;
     private final HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory;
+    @Setter(value = AccessLevel.PACKAGE)
+    @Getter(value = AccessLevel.PACKAGE)
     private String cachedAccessToken;
+    @Setter(value = AccessLevel.PACKAGE)
+    @Getter(value = AccessLevel.PACKAGE)
     private Date expiration;
 
     public ServiceCredentialsApiAccessTokenProvider(ApiAccessTokenConfiguration apiAccessTokenConfiguration) {
@@ -115,9 +123,13 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             String privateKeyContent = StringUtils.isNoneEmpty(apiAccessTokenConfiguration.getPrivateKeyContent())
                     ? apiAccessTokenConfiguration.getPrivateKeyContent()
                     : getPrivateKeyContentFromFile();
+            if (privateKeyContent == null) {
+                return null;
+            }
             String privateKeyContentNormalized = privateKeyContent
                     .replaceFirst("-----BEGIN PRIVATE KEY-----", "")
-                    .replace("-----END PRIVATE KEY-----", "");
+                    .replace("-----END PRIVATE KEY-----", "")
+                    .trim();
             byte[] decode = Base64.getDecoder().decode(privateKeyContentNormalized);
             PKCS8EncodedKeySpec keySpecPv = new PKCS8EncodedKeySpec(decode, "RSA");
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -128,6 +140,8 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             log.error("Can't read private key path {}", apiAccessTokenConfiguration.getPrivateKeyFilePath(), e);
         } catch (InvalidKeySpecException e) {
             log.error("Invalid key spec {}", apiAccessTokenConfiguration.getPrivateKeyFilePath(), e);
+        } catch (Exception e) {
+            log.error("Error while reading private key", e);
         }
         return null;
     }
@@ -153,6 +167,9 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
     }
 
     private String getPrivateKeyContentFromFile() throws IOException {
+        if (StringUtils.isEmpty(apiAccessTokenConfiguration.getPrivateKeyFilePath())) {
+            return null;
+        }
         Path privateKeyPath = Paths.get(apiAccessTokenConfiguration.getPrivateKeyFilePath());
         return String.join("", Files.readAllLines(privateKeyPath));
     }

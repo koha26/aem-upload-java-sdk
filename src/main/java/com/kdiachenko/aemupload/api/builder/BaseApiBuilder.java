@@ -1,6 +1,7 @@
 package com.kdiachenko.aemupload.api.builder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kdiachenko.aemupload.http.client.HttpClientSerializer;
 import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.client.ApiHttpClientBuilder;
@@ -15,6 +16,7 @@ public abstract class BaseApiBuilder<T extends BaseApiBuilder<T>> {
     protected ApiHttpClient apiHttpClient;
     protected ApiServerConfiguration apiServerConfiguration;
     protected ObjectMapper objectMapper;
+    protected HttpClientSerializer httpClientSerializer;
     protected ApiHttpClientResponseHandlerFactory responseHandlerFactory;
 
     protected BaseApiBuilder(ApiServerConfiguration apiServerConfiguration) {
@@ -40,8 +42,8 @@ public abstract class BaseApiBuilder<T extends BaseApiBuilder<T>> {
     }
 
     @SuppressWarnings("unchecked")
-    public T setObjectMapper(final ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public T withSerializer(final HttpClientSerializer httpClientSerializer) {
+        this.httpClientSerializer = httpClientSerializer;
         return (T) this;
     }
 
@@ -56,9 +58,13 @@ public abstract class BaseApiBuilder<T extends BaseApiBuilder<T>> {
             return apiHttpClient;
         }
         httpClient = Optional.ofNullable(httpClient).orElseGet(HttpClients::createDefault);
-        return ApiHttpClientBuilder.builder(httpClient)
-                .setObjectMapper(objectMapper)
-                .setResponseHandlerFactory(responseHandlerFactory)
-                .build();
+        ApiHttpClientBuilder builder = ApiHttpClientBuilder.builder(httpClient);
+        if (httpClientSerializer != null) {
+            builder.setSerializer(httpClientSerializer);
+        }
+        if (responseHandlerFactory != null) {
+            builder.setResponseHandlerFactory(responseHandlerFactory);
+        }
+        return builder.build();
     }
 }

@@ -1,4 +1,4 @@
-package com.kdiachenko.aemupload.utils;
+package com.kdiachenko.aemupload.internal.utils;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -9,13 +9,14 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ApiPathNormalizerTest {
+class PathNormalizerImplTest {
+    private final PathNormalizerImpl pathNormalizer = new PathNormalizerImpl();
 
     @ParameterizedTest(name = "[{index}] input: \"{0}\" → expected: \"{1}\"")
     @MethodSource("pathNormalizationVariantProvider")
     @DisplayName("should normalize paths correctly")
     void shouldNormalizePaths(String input, String expected) {
-        String result = ApiPathNormalizer.normalize(input);
+        String result = pathNormalizer.normalize(input);
         assertThat(result).isEqualTo(expected);
     }
 

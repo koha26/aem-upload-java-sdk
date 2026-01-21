@@ -2,6 +2,10 @@ package com.kdiachenko.aemupload.config;
 
 import org.apache.commons.lang3.StringUtils;
 
+/**
+ * Configuration interface for the AEM server.
+ * Intended for OSGi service injection or custom implementations.
+ */
 public interface ApiServerConfiguration {
     String getSchema();
 

@@ -1,4 +1,4 @@
-package com.kdiachenko.aemupload.utils;
+package com.kdiachenko.aemupload.internal.utils;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,7 +11,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class FileSplitUtilTest {
+class FileSplitterImplTest {
+    private final FileSplitterImpl fileSplitter = new FileSplitterImpl();
 
     @Test
     @DisplayName("should split file into multiple parts with given chunk size")
@@ -26,7 +27,7 @@ class FileSplitUtilTest {
 
         int chunkSize = 256;
 
-        List<Path> parts = FileSplitUtil.splitFile(inputFile, chunkSize);
+        List<Path> parts = fileSplitter.splitFile(inputFile, chunkSize);
 
         assertThat(parts).hasSize(5);
         assertPartSizes(parts, chunkSize);

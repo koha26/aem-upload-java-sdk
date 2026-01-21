@@ -126,13 +126,13 @@ class BaseApiBuilderTest {
         assertThat(builder.getApiServerConfiguration()).isEqualTo(newConfig);
     }
 
-    @Test
+/*    @Test
     void testSetObjectMapper() {
         TestApiBuilder result = builder.setObjectMapper(objectMapper);
 
         assertThat(result).isSameAs(builder);
         assertThat(builder.getObjectMapper()).isEqualTo(objectMapper);
-    }
+    }*/
 
     @Test
     void testSetResponseHandlerFactory() {

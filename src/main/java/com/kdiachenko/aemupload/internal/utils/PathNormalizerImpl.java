@@ -1,12 +1,14 @@
-package com.kdiachenko.aemupload.utils;
+package com.kdiachenko.aemupload.internal.utils;
 
+import com.kdiachenko.aemupload.utils.PathNormalizer;
 import org.apache.commons.lang3.StringUtils;
 
-public final class ApiPathNormalizer {
-    private ApiPathNormalizer() {
-    }
-
-    public static String normalize(final String path) {
+/**
+ * Default implementation of PathNormalizer.
+ */
+public class PathNormalizerImpl implements PathNormalizer {
+    @Override
+    public String normalize(final String path) {
         if (path == null) {
             return null;
         }
@@ -15,3 +17,4 @@ public final class ApiPathNormalizer {
         return "/api/assets/" + normalizedPath;
     }
 }
+

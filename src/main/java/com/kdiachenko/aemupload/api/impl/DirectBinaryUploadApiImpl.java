@@ -5,6 +5,7 @@ import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.utils.FileSplitter;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.options.CompleteBinaryUploadOptions;
 import com.kdiachenko.aemupload.options.CompleteUploadResponse;
@@ -12,7 +13,6 @@ import com.kdiachenko.aemupload.options.InitiateBinaryUploadOptions;
 import com.kdiachenko.aemupload.options.InitiateUploadResponse;
 import com.kdiachenko.aemupload.options.UploadBinaryOptions;
 import com.kdiachenko.aemupload.options.UploadBinaryResponse;
-import com.kdiachenko.aemupload.utils.FileSplitUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -39,6 +39,7 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
 
     private final ApiHttpClient apiHttpClient;
     private final ApiServerConfiguration apiServerConfiguration;
+    private final FileSplitter fileSplitter;
 
     @Override
     public AssetApiResponse<InitiateUploadResponse> initiateUpload(final InitiateBinaryUploadOptions request) {
@@ -63,7 +64,7 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
         try {
             var maxPartSize = request.getMaxPartSize();
 
-            List<Path> parts = FileSplitUtil.splitFile(request.getBinary(), maxPartSize);
+            List<Path> parts = fileSplitter.splitFile(request.getBinary(), maxPartSize);
 
             for (int i = 0; i < parts.size(); i++) {
                 var partInputStream = Files.newInputStream(parts.get(i));

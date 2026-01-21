@@ -3,8 +3,12 @@ package com.kdiachenko.aemupload.api;
 import com.kdiachenko.aemupload.api.builder.BaseApiBuilder;
 import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.api.impl.DirectBinaryUploadApiImpl;
+import com.kdiachenko.aemupload.utils.FileSplitter;
+import com.kdiachenko.aemupload.internal.utils.FileSplitterImpl;
 
 public class DirectBinaryUploadApiBuilder extends BaseApiBuilder<DirectBinaryUploadApiBuilder> {
+    private FileSplitter fileSplitter;
+
     protected DirectBinaryUploadApiBuilder(ApiServerConfiguration apiServerConfiguration) {
         super(apiServerConfiguration);
     }
@@ -13,7 +17,15 @@ public class DirectBinaryUploadApiBuilder extends BaseApiBuilder<DirectBinaryUpl
         return new DirectBinaryUploadApiBuilder(apiServerConfiguration);
     }
 
+    public DirectBinaryUploadApiBuilder withFileSplitter(FileSplitter fileSplitter) {
+        this.fileSplitter = fileSplitter;
+        return this;
+    }
+
     public DirectBinaryUploadApi build() {
-        return new DirectBinaryUploadApiImpl(buildApiHttpClient(), apiServerConfiguration);
+        if (fileSplitter == null) {
+            fileSplitter = new FileSplitterImpl();
+        }
+        return new DirectBinaryUploadApiImpl(buildApiHttpClient(), apiServerConfiguration, fileSplitter);
     }
 }

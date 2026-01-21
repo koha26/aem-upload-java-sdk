@@ -1,4 +1,6 @@
-package com.kdiachenko.aemupload.utils;
+package com.kdiachenko.aemupload.internal.utils;
+
+import com.kdiachenko.aemupload.utils.FileSplitter;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -7,11 +9,12 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class FileSplitUtil {
-    private FileSplitUtil() {
-    }
-
-    public static List<Path> splitFile(final Path path, final long maxChunkSize) throws IOException {
+/**
+ * Default implementation of FileSplitter.
+ */
+public class FileSplitterImpl implements FileSplitter {
+    @Override
+    public List<Path> splitFile(final Path path, final long maxChunkSize) throws IOException {
         var partCounter = 1;
         var buffer = new byte[(int) maxChunkSize];
 
@@ -31,3 +34,4 @@ public final class FileSplitUtil {
         return list;
     }
 }
+

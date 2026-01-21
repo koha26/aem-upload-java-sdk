@@ -5,9 +5,9 @@ import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.utils.PathNormalizer;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.model.DamAsset;
-import com.kdiachenko.aemupload.utils.ApiPathNormalizer;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,6 +21,7 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
 
     private final ApiHttpClient apiHttpClient;
     private final ApiServerConfiguration apiServerConfiguration;
+    private final PathNormalizer pathNormalizer;
 
     @Override
     public AssetApiResponse<DamAsset> getAssetMetadata(final String assetPath) {
@@ -33,7 +34,7 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
     public AssetApiResponse<Void> updateAssetMetadata(final String assetPath, final Map<String, String> metadata) {
         var formData = Map.of("class", "asset", "properties", metadata);
         var httpEntity = ApiHttpEntity.builder().body(formData).build();
-        var requestUrl = apiServerConfiguration.getHostUrl() + ApiPathNormalizer.normalize(assetPath);
+        var requestUrl = apiServerConfiguration.getHostUrl() + pathNormalizer.normalize(assetPath);
         ApiHttpResponse<Void> response =
                 apiHttpClient.put(requestUrl, httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
         return AssetApiResponse.map(response);
@@ -43,7 +44,7 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
     public AssetApiResponse<Void> deleteAsset(final String assetPath) {
         Map<String, Object> properties = Map.of(":operation", "delete");
         var httpEntity = ApiHttpEntity.builder().body(properties).build();
-        var requestUrl = apiServerConfiguration.getHostUrl() + ApiPathNormalizer.normalize(assetPath);
+        var requestUrl = apiServerConfiguration.getHostUrl() + pathNormalizer.normalize(assetPath);
         ApiHttpResponse<Void> response = apiHttpClient.post(requestUrl,
                 httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
         return AssetApiResponse.map(response);

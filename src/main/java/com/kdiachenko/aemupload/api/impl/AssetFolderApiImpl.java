@@ -5,9 +5,9 @@ import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.utils.PathNormalizer;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.model.AssetElement;
-import com.kdiachenko.aemupload.utils.ApiPathNormalizer;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -22,10 +22,11 @@ public class AssetFolderApiImpl implements AssetFolderApi {
 
     private final ApiHttpClient apiHttpClient;
     private final ApiServerConfiguration apiServerConfiguration;
+    private final PathNormalizer pathNormalizer;
 
     @Override
     public AssetApiResponse<AssetElement> getFolder(final String folder) {
-        var requestUrl = apiServerConfiguration.getHostUrl() + ApiPathNormalizer.normalize(folder);
+        var requestUrl = apiServerConfiguration.getHostUrl() + pathNormalizer.normalize(folder);
         ApiHttpResponse<AssetElement> response =
                 apiHttpClient.get(requestUrl, AUTHORIZABLE_API_REQUEST, AssetElement.class);
         return AssetApiResponse.map(response);
@@ -47,7 +48,7 @@ public class AssetFolderApiImpl implements AssetFolderApi {
                                                               final Map<String, String> properties) {
         var formData = Map.of("class", "assetFolder", "properties", properties);
         var httpEntity = ApiHttpEntity.builder().body(formData).build();
-        var requestUrl = apiServerConfiguration.getHostUrl() + ApiPathNormalizer.normalize(folder);
+        var requestUrl = apiServerConfiguration.getHostUrl() + pathNormalizer.normalize(folder);
         ApiHttpResponse<Void> response =
                 apiHttpClient.post(requestUrl, httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
         return AssetApiResponse.map(response);

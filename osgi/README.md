@@ -1,102 +1,193 @@
-# Sample AEM project template
+# AEM Upload SDK - OSGi Bundle
 
-This is a project template for AEM-based applications. It is intended as a best-practice set of examples as well as a potential starting point to develop your own functionality.
+OSGi wrapper for the AEM Upload Java SDK, enabling use in AEM/OSGi environments.
 
 ## Modules
 
-The main parts of the template are:
+- **bundle**: OSGi bundle containing SDK adapters and services
+- **package**: AEM content package for deploying the bundle
 
-* [core:](core/README.md) Java bundle containing all core functionality like OSGi services, listeners or schedulers, as well as component-related Java code such as servlets or request filters.
-* [it.tests:](it.tests/README.md) Java based integration tests
-* [ui.apps:](ui.apps/README.md) contains the /apps (and /etc) parts of the project, ie JS&CSS clientlibs, components, and templates
-* [ui.content:](ui.content/README.md) contains sample content using the components from the ui.apps
-* ui.config: contains runmode specific OSGi configs for the project
-* [ui.frontend:](ui.frontend.general/README.md) an optional dedicated front-end build mechanism (Angular, React or general Webpack project)
-* [ui.tests.cypress:](ui.tests.cypress/README.md) Cypress based UI tests
-* [ui.tests.wdio:](ui.tests.wdio/README.md) Selenium based UI tests
-* all: a single content package that embeds all of the compiled modules (bundles and content packages) including any vendor dependencies
-* analyse: this module runs analysis on the project which provides additional validation for deploying into AEMaaCS
+## Installation
 
-## How to build
+### Maven Dependency
 
-To build all the modules run in the project root directory the following command with Maven 3:
+Add to your AEM project's `pom.xml`:
 
-    mvn clean install
+```xml
+<dependency>
+    <groupId>com.kdiachenko</groupId>
+    <artifactId>aem-upload-java-sdk-osgi.bundle</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+</dependency>
+```
 
-To build all the modules and deploy the `all` package to a local instance of AEM, run in the project root directory the following command:
+### Deploy to AEM
 
-    mvn clean install -PautoInstallSinglePackage
+Deploy the package to a local AEM instance:
 
-Or to deploy it to a publish instance, run
+```bash
+cd osgi
+mvn clean install -PautoInstallSinglePackage
+```
 
-    mvn clean install -PautoInstallSinglePackagePublish
+## Configuration
 
-Or alternatively
+Configure the SDK via OSGi configuration in the Felix Console or via `.cfg.json` files.
 
-    mvn clean install -PautoInstallSinglePackage -Daem.port=4503
+### Configuration Options
 
-Or to deploy only the bundle to the author, run
+| Property | Description | Default |
+|----------|-------------|---------|
+| `serverUrl` | AEM server URL | `http://localhost:4502` |
+| `authType` | Authentication type: `accessToken`, `basic`, or `serviceCredentials` | `basic` |
+| `accessToken` | Static access token (for development) | - |
+| `username` | Username for basic auth | `admin` |
+| `password` | Password for basic auth | `admin` |
+| `clientId` | Adobe I/O client ID (for service credentials) | - |
+| `clientSecret` | Adobe I/O client secret | - |
+| `technicalAccountId` | Technical account ID | - |
+| `orgId` | Adobe organization ID | - |
+| `privateKeyContent` | PEM private key content | - |
+| `privateKeyPath` | Path to private key file | - |
+| `metaScopes` | Meta scopes array | `["ent_aem_cloud_api"]` |
+| `imsEndpoint` | IMS endpoint URL | `https://ims-na1.adobelogin.com/ims/exchange/jwt` |
 
-    mvn clean install -PautoInstallBundle
+### Example Configuration Files
 
-Or to deploy only a single content package, run in the sub-module directory (i.e `ui.apps`)
+#### Basic Auth (Local Development)
 
-    mvn clean install -PautoInstallPackage
+`com.kdiachenko.aemupload.provider.impl.AemUploadSdkServiceImpl.cfg.json`:
+```json
+{
+    "serverUrl": "http://localhost:4502",
+    "authType": "basic",
+    "username": "admin",
+    "password": "admin"
+}
+```
 
-## Documentation
+#### Access Token (Development)
 
-The build process also generates documentation in the form of README.md files in each module directory for easy reference. Depending on the options you select at build time, the content may be customized to your project.
+```json
+{
+    "serverUrl": "https://author-pXXXXX-eYYYYY.adobeaemcloud.com",
+    "authType": "accessToken",
+    "accessToken": "eyJ0eXAiOiJKV1Q..."
+}
+```
 
-## Testing
+#### Service Credentials (Production)
 
-There are three levels of testing contained in the project:
+```json
+{
+    "serverUrl": "https://author-pXXXXX-eYYYYY.adobeaemcloud.com",
+    "authType": "serviceCredentials",
+    "clientId": "your-client-id",
+    "clientSecret": "your-client-secret",
+    "technicalAccountId": "your-tech-account@techacct.adobe.com",
+    "orgId": "XXXXXXXXXXXXXXXX@AdobeOrg",
+    "privateKeyPath": "/etc/keys/private.key",
+    "metaScopes": ["ent_aem_cloud_api"]
+}
+```
 
-### Unit tests
+## Usage
 
-This show-cases classic unit testing of the code contained in the bundle. To
-test, execute:
+### Inject the Service
 
-    mvn clean test
+```java
+import com.kdiachenko.aemupload.provider.AemUploadSdkService;
+import com.kdiachenko.aemupload.api.DirectBinaryUploadApi;
+import com.kdiachenko.aemupload.options.InitiateBinaryUploadOptions;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
-### Integration tests
+@Component(service = MyAssetUploader.class)
+public class MyAssetUploader {
 
-This allows running integration tests that exercise the capabilities of AEM via
-HTTP calls to its API. To run the integration tests, run:
+    @Reference
+    private AemUploadSdkService sdkService;
 
-    mvn clean verify -Plocal
+    public void uploadAsset(String folderPath, String fileName, long fileSize) {
+        // Check if SDK is ready
+        if (!sdkService.isReady()) {
+            throw new IllegalStateException("SDK not configured");
+        }
 
-Test classes must be saved in the `src/main/java` directory (or any of its
-subdirectories), and must be contained in files matching the pattern `*IT.java`.
+        // Get the API
+        DirectBinaryUploadApi uploadApi = sdkService.directBinaryUploadApi();
 
-The configuration provides sensible defaults for a typical local installation of
-AEM. If you want to point the integration tests to different AEM author and
-publish instances, you can use the following system properties via Maven's `-D`
-flag.
+        // Initiate upload
+        var response = uploadApi.initiateUpload(
+            InitiateBinaryUploadOptions.builder()
+                .damAssetFolder(folderPath)
+                .fileName(fileName)
+                .fileSize(fileSize)
+                .build()
+        );
 
-| Property | Description | Default value |
-| --- | --- | --- |
-| `it.author.url` | URL of the author instance | `http://localhost:4502` |
-| `it.author.user` | Admin user for the author instance | `admin` |
-| `it.author.password` | Password of the admin user for the author instance | `admin` |
-| `it.publish.url` | URL of the publish instance | `http://localhost:4503` |
-| `it.publish.user` | Admin user for the publish instance | `admin` |
-| `it.publish.password` | Password of the admin user for the publish instance | `admin` |
+        // Handle response
+        response.ifSuccess(data -> {
+            System.out.println("Upload initiated: " + data.getUploadToken());
+        }).ifFailure(error -> {
+            System.err.println("Failed: " + error.getMessage());
+        });
+    }
+}
+```
 
-The integration tests in this archetype use the [AEM Testing
-Clients](https://github.com/adobe/aem-testing-clients) and showcase some
-recommended [best
-practices](https://github.com/adobe/aem-testing-clients/wiki/Best-practices) to
-be put in use when writing integration tests for AEM.
+### Using Sling Models
 
-## Static Analysis
+```java
+import com.kdiachenko.aemupload.provider.AemUploadSdkService;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.models.annotations.Model;
+import org.apache.sling.models.annotations.injectorspecific.OSGiService;
 
-The `analyse` module performs static analysis on the project for deploying into AEMaaCS. It is automatically
-run when executing
+@Model(adaptables = Resource.class)
+public class AssetUploadModel {
 
-    mvn clean install
+    @OSGiService
+    private AemUploadSdkService sdkService;
 
-from the project root directory. Additional information about this analysis and how to further configure it
-can be found here https://github.com/adobe/aemanalyser-maven-plugin
+    public boolean isUploadAvailable() {
+        return sdkService != null && sdkService.isReady();
+    }
+}
+```
+
+## Backward Compatibility
+
+The bundle also exports the legacy `SdkApiProvider` interface for backward compatibility:
+
+```java
+@Reference
+private SdkApiProvider sdkApiProvider; // Deprecated - use AemUploadSdkService instead
+
+DirectBinaryUploadApi api = sdkApiProvider.getDirectBinaryUploadApi();
+```
+
+> **Note**: `SdkApiProvider` is deprecated. Migrate to `AemUploadSdkService` for better features
+> and lifecycle management.
+
+## Building
+
+```bash
+# Build bundle only
+cd osgi/bundle
+mvn clean install
+
+# Build and deploy to AEM
+cd osgi
+mvn clean install -PautoInstallSinglePackage
+
+# Build with specific AEM instance
+mvn clean install -PautoInstallSinglePackage -Daem.host=localhost -Daem.port=4502
+```
+
+## License
+
+See [LICENSE](../LICENSE) for details.
 
 ### UI tests
 

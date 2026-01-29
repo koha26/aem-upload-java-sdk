@@ -15,13 +15,16 @@ import org.osgi.service.component.annotations.Reference;
 /**
  * OSGi service that implements the {@link SdkApiProvider} interface.
  * This implementation provides instances of various SDK APIs using {@link DefaultSdkApiFactory}.
- * <p>
  *
  * @author kostiantyn.diachenko
+ * @deprecated Use {@link AemUploadSdkServiceImpl} instead, which provides better lifecycle
+ *             management and supports multiple authentication types via a single configuration.
  */
+@Deprecated(forRemoval = true)
 @Component(
         service = SdkApiProvider.class,
-        properties = Constants.SERVICE_RANKING + ":Integer=10"
+        properties = Constants.SERVICE_RANKING + ":Integer=5",
+        enabled = false // Disabled by default - use AemUploadSdkServiceImpl instead
 )
 public class SdkApiProviderImpl implements SdkApiProvider {
 

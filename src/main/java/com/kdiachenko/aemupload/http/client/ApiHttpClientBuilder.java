@@ -35,7 +35,7 @@ public class ApiHttpClientBuilder {
             setSerializer(DEFAULT_HTTP_CLIENT_SERIALIZER);
         }
         if (responseHandlerFactory == null) {
-            setResponseHandlerFactory(ApiHttpClientResponseHandlerFactory.getInstance());
+            setResponseHandlerFactory(ApiHttpClientResponseHandlerFactory.create());
         }
         return new ApiHttpClientImpl(httpClient, httpClientSerializer, responseHandlerFactory);
     }

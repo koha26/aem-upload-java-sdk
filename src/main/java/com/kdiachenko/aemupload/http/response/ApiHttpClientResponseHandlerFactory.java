@@ -3,20 +3,38 @@ package com.kdiachenko.aemupload.http.response;
 import com.kdiachenko.aemupload.http.client.HttpClientSerializer;
 import com.kdiachenko.aemupload.internal.http.JacksonHttpClientSerializer;
 
+/**
+ * Factory for creating HTTP response handlers.
+ *
+ * <p>Use {@link #create()} or {@link #create(HttpClientSerializer)} to create instances.</p>
+ */
 public interface ApiHttpClientResponseHandlerFactory {
 
-    ApiHttpClientResponseHandlerFactory DEFAULT = new ApiHttpClientResponseHandlerFactory() {
-        private final HttpClientSerializer httpClientSerializer = new JacksonHttpClientSerializer();
-
-        @Override
-        public <T> ApiHttpClientResponseHandler<T> createHandler(final Class<T> responseType) {
-            return new ApiHttpClientResponseHandler<>(responseType, httpClientSerializer);
-        }
-    };
-
-    static ApiHttpClientResponseHandlerFactory getInstance() {
-        return DEFAULT;
+    /**
+     * Creates a new factory with default Jackson serializer.
+     *
+     * @return a new factory instance
+     */
+    static ApiHttpClientResponseHandlerFactory create() {
+        return create(new JacksonHttpClientSerializer());
     }
 
+    /**
+     * Creates a new factory with a custom serializer.
+     *
+     * @param serializer the serializer to use
+     * @return a new factory instance
+     */
+    static ApiHttpClientResponseHandlerFactory create(HttpClientSerializer serializer) {
+        return new DefaultApiHttpClientResponseHandlerFactory(serializer);
+    }
+
+    /**
+     * Creates a response handler for the given response type.
+     *
+     * @param responseType the expected response type
+     * @param <T> the response type
+     * @return a response handler
+     */
     <T> ApiHttpClientResponseHandler<T> createHandler(Class<T> responseType);
 }

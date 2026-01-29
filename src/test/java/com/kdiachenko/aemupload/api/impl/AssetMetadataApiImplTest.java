@@ -4,8 +4,10 @@ import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.http.entity.HttpContexts;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.model.DamAsset;
+import com.kdiachenko.aemupload.utils.PathNormalizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,10 +21,8 @@ import org.mockito.quality.Strictness;
 
 import java.util.Map;
 
-import static com.kdiachenko.aemupload.http.client.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
@@ -44,6 +44,9 @@ class AssetMetadataApiImplTest {
     private ApiServerConfiguration apiServerConfiguration;
 
     @Mock
+    private PathNormalizer pathNormalizer;
+
+    @Mock
     private ApiHttpResponse<DamAsset> damAssetResponse;
 
     @Mock
@@ -60,6 +63,7 @@ class AssetMetadataApiImplTest {
     @BeforeEach
     void setUp() {
         when(apiServerConfiguration.getHostUrl()).thenReturn(HOST_URL);
+        when(pathNormalizer.normalize(ASSET_PATH)).thenReturn(NORMALIZED_ASSET_PATH);
 
         // Setup default behavior for mock responses
         when(damAssetResponse.isSuccess()).thenReturn(true);
@@ -75,7 +79,7 @@ class AssetMetadataApiImplTest {
         doReturn(voidResponse).when(apiHttpClient).put(any(), any(), any(), any());
         doReturn(voidResponse).when(apiHttpClient).post(any(), any(), any(), any());
 
-        assetMetadataApi = new AssetMetadataApiImpl(apiHttpClient, apiServerConfiguration);
+        assetMetadataApi = new AssetMetadataApiImpl(apiHttpClient, apiServerConfiguration, pathNormalizer);
     }
 
     @Test
@@ -83,7 +87,7 @@ class AssetMetadataApiImplTest {
     void getAssetMetadata_shouldMakeGetRequestAndReturnMappedResponse() {
         // Arrange
         String metadataUrl = HOST_URL + ASSET_PATH + "/jcr:content/metadata.json";
-        when(apiHttpClient.get(eq(metadataUrl), eq(AUTHORIZABLE_API_REQUEST), eq(DamAsset.class)))
+        when(apiHttpClient.get(eq(metadataUrl), eq(HttpContexts.AUTHORIZED), eq(DamAsset.class)))
                 .thenReturn(damAssetResponse);
 
         // Act
@@ -92,7 +96,7 @@ class AssetMetadataApiImplTest {
         // Assert
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getBody()).isEqualTo(damAsset);
-        verify(apiHttpClient).get(eq(metadataUrl), eq(AUTHORIZABLE_API_REQUEST), eq(DamAsset.class));
+        verify(apiHttpClient).get(eq(metadataUrl), eq(HttpContexts.AUTHORIZED), eq(DamAsset.class));
     }
 
     @Test
@@ -100,7 +104,7 @@ class AssetMetadataApiImplTest {
     void updateAssetMetadata_shouldMakePutRequestAndReturnMappedResponse() {
         // Arrange
         Map<String, String> metadata = Map.of("dc:title", "New Title", "dc:description", "New Description");
-        when(apiHttpClient.put(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class)))
+        when(apiHttpClient.put(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
 
         // Act
@@ -108,7 +112,7 @@ class AssetMetadataApiImplTest {
 
         // Assert
         assertThat(response.isSuccess()).isTrue();
-        verify(apiHttpClient).put(eq(HOST_URL + NORMALIZED_ASSET_PATH), httpEntityCaptor.capture(), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class));
+        verify(apiHttpClient).put(eq(HOST_URL + NORMALIZED_ASSET_PATH), httpEntityCaptor.capture(), eq(HttpContexts.AUTHORIZED), eq(Void.class));
 
         Map<String, Object> formData = (Map<String, Object>) httpEntityCaptor.getValue().getBody();
         assertThat(formData).containsEntry("class", "asset");
@@ -120,7 +124,7 @@ class AssetMetadataApiImplTest {
     @DisplayName("deleteAsset should make POST request and return mapped response")
     void deleteAsset_shouldMakePostRequestAndReturnMappedResponse() {
         // Arrange
-        when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class)))
+        when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
 
         // Act
@@ -128,7 +132,7 @@ class AssetMetadataApiImplTest {
 
         // Assert
         assertThat(response.isSuccess()).isTrue();
-        verify(apiHttpClient).post(eq(HOST_URL + NORMALIZED_ASSET_PATH), httpEntityCaptor.capture(), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class));
+        verify(apiHttpClient).post(eq(HOST_URL + NORMALIZED_ASSET_PATH), httpEntityCaptor.capture(), eq(HttpContexts.AUTHORIZED), eq(Void.class));
 
         Map<String, Object> properties = (Map<String, Object>) httpEntityCaptor.getValue().getBody();
         assertThat(properties).containsEntry(":operation", "delete");
@@ -139,7 +143,7 @@ class AssetMetadataApiImplTest {
     void getAssetMetadata_shouldHandleErrorResponse() {
         // Arrange
         String metadataUrl = HOST_URL + ASSET_PATH + "/jcr:content/metadata.json";
-        when(apiHttpClient.get(eq(metadataUrl), eq(AUTHORIZABLE_API_REQUEST), eq(DamAsset.class)))
+        when(apiHttpClient.get(eq(metadataUrl), eq(HttpContexts.AUTHORIZED), eq(DamAsset.class)))
                 .thenReturn(damAssetResponse);
         when(damAssetResponse.isSuccess()).thenReturn(false);
         when(damAssetResponse.getErrorMessage()).thenReturn("Error message");
@@ -157,7 +161,7 @@ class AssetMetadataApiImplTest {
     void updateAssetMetadata_shouldHandleErrorResponse() {
         // Arrange
         Map<String, String> metadata = Map.of("dc:title", "New Title");
-        when(apiHttpClient.put(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class)))
+        when(apiHttpClient.put(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
         when(voidResponse.isSuccess()).thenReturn(false);
         when(voidResponse.getErrorMessage()).thenReturn("Error message");
@@ -174,7 +178,7 @@ class AssetMetadataApiImplTest {
     @DisplayName("deleteAsset should handle error response")
     void deleteAsset_shouldHandleErrorResponse() {
         // Arrange
-        when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class)))
+        when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
         when(voidResponse.isSuccess()).thenReturn(false);
         when(voidResponse.getErrorMessage()).thenReturn("Error message");

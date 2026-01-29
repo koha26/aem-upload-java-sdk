@@ -2,6 +2,7 @@ package com.kdiachenko.aemupload.auth.impl;
 
 import com.kdiachenko.aemupload.auth.ApiAccessTokenProvider;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
+import com.kdiachenko.aemupload.http.entity.HttpContexts;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.core5.http.EntityDetails;
 import org.apache.hc.core5.http.Header;
@@ -100,6 +101,6 @@ class ApiAuthorizationInterceptorImplTest {
     }
 
     private void initApiAuthorizationRequiredRequestAttribute(Object value) {
-        httpContext.setAttribute(ApiHttpClient.API_AUTHORIZATION_REQUIRED_REQ_ATTR, value);
+        httpContext.setAttribute(HttpContexts.AUTHORIZATION_REQUIRED_ATTR, value);
     }
 }

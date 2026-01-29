@@ -5,6 +5,7 @@ import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.http.entity.HttpContexts;
 import com.kdiachenko.aemupload.utils.PathNormalizer;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.model.DamAsset;
@@ -12,8 +13,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
-
-import static com.kdiachenko.aemupload.http.client.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
 
 @Slf4j
 @AllArgsConstructor
@@ -26,7 +25,7 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
     @Override
     public AssetApiResponse<DamAsset> getAssetMetadata(final String assetPath) {
         ApiHttpResponse<DamAsset> response = apiHttpClient.get(buildAssetMetadataUrl(assetPath),
-                AUTHORIZABLE_API_REQUEST, DamAsset.class);
+                HttpContexts.AUTHORIZED, DamAsset.class);
         return AssetApiResponse.map(response);
     }
 
@@ -36,7 +35,7 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
         var httpEntity = ApiHttpEntity.builder().body(formData).build();
         var requestUrl = apiServerConfiguration.getHostUrl() + pathNormalizer.normalize(assetPath);
         ApiHttpResponse<Void> response =
-                apiHttpClient.put(requestUrl, httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
+                apiHttpClient.put(requestUrl, httpEntity, HttpContexts.AUTHORIZED, Void.class);
         return AssetApiResponse.map(response);
     }
 
@@ -46,7 +45,7 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
         var httpEntity = ApiHttpEntity.builder().body(properties).build();
         var requestUrl = apiServerConfiguration.getHostUrl() + pathNormalizer.normalize(assetPath);
         ApiHttpResponse<Void> response = apiHttpClient.post(requestUrl,
-                httpEntity, AUTHORIZABLE_API_REQUEST, Void.class);
+                httpEntity, HttpContexts.AUTHORIZED, Void.class);
         return AssetApiResponse.map(response);
     }
 

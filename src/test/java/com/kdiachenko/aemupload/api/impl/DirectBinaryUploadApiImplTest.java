@@ -4,6 +4,7 @@ import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.http.entity.HttpContexts;
 import com.kdiachenko.aemupload.internal.utils.FileSplitterImpl;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.options.CompleteBinaryUploadOptions;
@@ -30,7 +31,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static com.kdiachenko.aemupload.http.client.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
 import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
 import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -116,9 +116,9 @@ class DirectBinaryUploadApiImplTest {
         when(completeUploadResponse.getErrorMessage()).thenReturn(null);
 
         // Setup default behavior for apiHttpClient
-        doReturn(initiateUploadResponse).when(apiHttpClient).post(anyString(), any(ApiHttpEntity.class), eq(AUTHORIZABLE_API_REQUEST), eq(InitiateUploadResponse.class));
+        doReturn(initiateUploadResponse).when(apiHttpClient).post(anyString(), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(InitiateUploadResponse.class));
         doReturn(uploadPartResponse).when(apiHttpClient).put(anyString(), any(ApiHttpEntity.class), eq(Void.class));
-        doReturn(completeUploadResponse).when(apiHttpClient).post(anyString(), any(ApiHttpEntity.class), eq(AUTHORIZABLE_API_REQUEST), eq(CompleteUploadResponse.class));
+        doReturn(completeUploadResponse).when(apiHttpClient).post(anyString(), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(CompleteUploadResponse.class));
 
         directBinaryUploadApi = new DirectBinaryUploadApiImpl(apiHttpClient, apiServerConfiguration, new FileSplitterImpl());
     }
@@ -133,7 +133,7 @@ class DirectBinaryUploadApiImplTest {
                 .fileSize(FILE_SIZE)
                 .build();
 
-        String expectedUrl = HOST_URL + NORMALIZED_DAM_ASSET_FOLDER + ".initiateUpload.json";
+        String expectedUrl = HOST_URL + DAM_ASSET_FOLDER + ".initiateUpload.json";
 
         // Act
         AssetApiResponse<InitiateUploadResponse> response = directBinaryUploadApi.initiateUpload(options);
@@ -141,7 +141,7 @@ class DirectBinaryUploadApiImplTest {
         // Assert
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getBody()).isEqualTo(initiateUploadResponseBody);
-        verify(apiHttpClient).post(eq(expectedUrl), httpEntityCaptor.capture(), eq(AUTHORIZABLE_API_REQUEST), eq(InitiateUploadResponse.class));
+        verify(apiHttpClient).post(eq(expectedUrl), httpEntityCaptor.capture(), eq(HttpContexts.AUTHORIZED), eq(InitiateUploadResponse.class));
 
         Map<String, Object> formData = (Map<String, Object>) httpEntityCaptor.getValue().getBody();
         assertThat(formData).containsEntry("fileName", FILE_NAME);
@@ -224,7 +224,7 @@ class DirectBinaryUploadApiImplTest {
         // Assert
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getBody()).isEqualTo(completeUploadResponseBody);
-        verify(apiHttpClient).post(eq(expectedUrl), httpEntityCaptor.capture(), eq(AUTHORIZABLE_API_REQUEST), eq(CompleteUploadResponse.class));
+        verify(apiHttpClient).post(eq(expectedUrl), httpEntityCaptor.capture(), eq(HttpContexts.AUTHORIZED), eq(CompleteUploadResponse.class));
 
         Map<String, String> formData = (Map<String, String>) httpEntityCaptor.getValue().getBody();
         assertThat(formData).containsEntry("fileName", FILE_NAME);

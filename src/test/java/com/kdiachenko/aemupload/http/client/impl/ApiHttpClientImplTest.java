@@ -190,7 +190,12 @@ class ApiHttpClientImplTest {
     @Test
     void testPostWithInputStream_IOException() throws IOException {
         var url = "https://api.host/v1/api/call";
-        InputStream stream = new BufferedInputStream(new ByteArrayInputStream("data".getBytes())) {
+        var stream = new InputStream() {
+            @Override
+            public int read() throws IOException {
+                return -1;
+            }
+
             @Override
             public byte[] readAllBytes() throws IOException {
                 throw new IOException();
@@ -204,7 +209,7 @@ class ApiHttpClientImplTest {
 
         assertThat(result.getStatus()).isEqualTo(500);
         assertThat(result.getBody()).isNull();
-        assertThat(result.getErrorMessage()).isEqualTo("Error while executing request");
+        assertThat(result.getErrorMessage()).startsWith("Unexpected error while executing request:");
     }
 
     @Test
@@ -261,7 +266,7 @@ class ApiHttpClientImplTest {
 
         assertThat(result.getStatus()).isEqualTo(500);
         assertThat(result.getBody()).isNull();
-        assertThat(result.getErrorMessage()).isEqualTo("Error while executing request");
+        assertThat(result.getErrorMessage()).startsWith("Unexpected error while executing request:");
     }
 
     @Test
@@ -349,7 +354,7 @@ class ApiHttpClientImplTest {
 
         assertThat(result.getStatus()).isEqualTo(500);
         assertThat(result.getBody()).isNull();
-        assertThat(result.getErrorMessage()).isEqualTo("Error while executing request");
+        assertThat(result.getErrorMessage()).startsWith("Unexpected error while executing request:");
     }
 
     @Test
@@ -386,7 +391,7 @@ class ApiHttpClientImplTest {
 
         assertThat(result.getStatus()).isEqualTo(500);
         assertThat(result.getBody()).isNull();
-        assertThat(result.getErrorMessage()).isEqualTo("Error while executing request");
+        assertThat(result.getErrorMessage()).startsWith("Unexpected error while executing request:");
     }
 
     @Test

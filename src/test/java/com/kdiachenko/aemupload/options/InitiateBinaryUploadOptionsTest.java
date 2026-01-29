@@ -3,6 +3,7 @@ package com.kdiachenko.aemupload.options;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class InitiateBinaryUploadOptionsTest {
 
@@ -27,33 +28,51 @@ class InitiateBinaryUploadOptionsTest {
     }
 
     @Test
-    void builder_shouldCreateObjectWithDefaultValues() {
-        // When
-        InitiateBinaryUploadOptions options = InitiateBinaryUploadOptions.builder().build();
+    void builder_shouldValidateRequiredFields() {
+        // damAssetFolder is required
+        assertThatThrownBy(() -> InitiateBinaryUploadOptions.builder()
+                .fileName("test.jpg")
+                .fileSize(1024L)
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("damAssetFolder");
 
-        // Then
-        assertThat(options.getDamAssetFolder()).isNull();
-        assertThat(options.getFileName()).isNull();
-        assertThat(options.getFileSize()).isEqualTo(0L);
+        // fileName is required
+        assertThatThrownBy(() -> InitiateBinaryUploadOptions.builder()
+                .damAssetFolder("/content/dam")
+                .fileSize(1024L)
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("fileName");
+
+        // fileSize must be > 0
+        assertThatThrownBy(() -> InitiateBinaryUploadOptions.builder()
+                .damAssetFolder("/content/dam")
+                .fileName("test.jpg")
+                .fileSize(0L)
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("fileSize");
     }
 
     @Test
-    void settersAndGetters_shouldWorkCorrectly() {
+    void toBuilder_shouldAllowModification() {
         // Given
-        InitiateBinaryUploadOptions options = InitiateBinaryUploadOptions.builder().build();
-        String damAssetFolder = "/content/dam/folder";
-        String fileName = "test.jpg";
-        long fileSize = 1024L;
+        InitiateBinaryUploadOptions original = InitiateBinaryUploadOptions.builder()
+                .damAssetFolder("/content/dam/folder")
+                .fileName("test.jpg")
+                .fileSize(1024L)
+                .build();
 
         // When
-        options.setDamAssetFolder(damAssetFolder);
-        options.setFileName(fileName);
-        options.setFileSize(fileSize);
+        InitiateBinaryUploadOptions modified = original.toBuilder()
+                .fileName("modified.jpg")
+                .build();
 
         // Then
-        assertThat(options.getDamAssetFolder()).isEqualTo(damAssetFolder);
-        assertThat(options.getFileName()).isEqualTo(fileName);
-        assertThat(options.getFileSize()).isEqualTo(fileSize);
+        assertThat(modified.getDamAssetFolder()).isEqualTo("/content/dam/folder");
+        assertThat(modified.getFileName()).isEqualTo("modified.jpg");
+        assertThat(modified.getFileSize()).isEqualTo(1024L);
     }
 
     @Test

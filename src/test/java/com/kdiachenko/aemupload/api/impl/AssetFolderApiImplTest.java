@@ -4,8 +4,10 @@ import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.http.entity.HttpContexts;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.model.AssetElement;
+import com.kdiachenko.aemupload.utils.PathNormalizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,10 +21,8 @@ import org.mockito.quality.Strictness;
 
 import java.util.Map;
 
-import static com.kdiachenko.aemupload.http.client.ApiHttpClient.AUTHORIZABLE_API_REQUEST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
@@ -43,6 +43,9 @@ class AssetFolderApiImplTest {
     private ApiServerConfiguration apiServerConfiguration;
 
     @Mock
+    private PathNormalizer pathNormalizer;
+
+    @Mock
     private ApiHttpResponse<AssetElement> assetElementResponse;
 
     @Mock
@@ -59,6 +62,7 @@ class AssetFolderApiImplTest {
     @BeforeEach
     void setUp() {
         when(apiServerConfiguration.getHostUrl()).thenReturn(HOST_URL);
+        when(pathNormalizer.normalize(FOLDER_PATH)).thenReturn(NORMALIZED_FOLDER_PATH);
 
         // Setup default behavior for mock responses
         when(assetElementResponse.isSuccess()).thenReturn(true);
@@ -73,14 +77,14 @@ class AssetFolderApiImplTest {
         doReturn(assetElementResponse).when(apiHttpClient).get(any(), any(), any());
         doReturn(voidResponse).when(apiHttpClient).post(any(), any(), any(), any());
 
-        assetFolderApi = new AssetFolderApiImpl(apiHttpClient, apiServerConfiguration);
+        assetFolderApi = new AssetFolderApiImpl(apiHttpClient, apiServerConfiguration, pathNormalizer);
     }
 
     @Test
     @DisplayName("getFolder should make GET request and return mapped response")
     void getFolder_shouldMakeGetRequestAndReturnMappedResponse() {
         // Arrange
-        when(apiHttpClient.get(eq(HOST_URL + NORMALIZED_FOLDER_PATH), eq(AUTHORIZABLE_API_REQUEST), eq(AssetElement.class)))
+        when(apiHttpClient.get(eq(HOST_URL + NORMALIZED_FOLDER_PATH), eq(HttpContexts.AUTHORIZED), eq(AssetElement.class)))
                 .thenReturn(assetElementResponse);
         when(assetElementResponse.isSuccess()).thenReturn(true);
         when(assetElementResponse.getBody()).thenReturn(assetElement);
@@ -91,14 +95,14 @@ class AssetFolderApiImplTest {
         // Assert
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getBody()).isEqualTo(assetElement);
-        verify(apiHttpClient).get(eq(HOST_URL + NORMALIZED_FOLDER_PATH), eq(AUTHORIZABLE_API_REQUEST), eq(AssetElement.class));
+        verify(apiHttpClient).get(eq(HOST_URL + NORMALIZED_FOLDER_PATH), eq(HttpContexts.AUTHORIZED), eq(AssetElement.class));
     }
 
     @Test
     @DisplayName("createFolder should make POST request with default properties and return mapped response")
     void createFolder_shouldMakePostRequestWithDefaultPropertiesAndReturnMappedResponse() {
         // Arrange
-        when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), any(ApiHttpEntity.class), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class)))
+        when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
         when(voidResponse.isSuccess()).thenReturn(true);
 
@@ -107,7 +111,7 @@ class AssetFolderApiImplTest {
 
         // Assert
         assertThat(response.isSuccess()).isTrue();
-        verify(apiHttpClient).post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), httpEntityCaptor.capture(), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class));
+        verify(apiHttpClient).post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), httpEntityCaptor.capture(), eq(HttpContexts.AUTHORIZED), eq(Void.class));
 
         Map<String, Object> formData = (Map<String, Object>) httpEntityCaptor.getValue().getBody();
         assertThat(formData).containsEntry("class", "assetFolder");
@@ -120,7 +124,7 @@ class AssetFolderApiImplTest {
     void createFolderWithProperties_shouldMakePostRequestWithCustomPropertiesAndReturnMappedResponse() {
         // Arrange
         Map<String, String> customProperties = Map.of("title", "Custom Title", "description", "Custom Description");
-        when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), any(ApiHttpEntity.class), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class)))
+        when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
         when(voidResponse.isSuccess()).thenReturn(true);
 
@@ -129,7 +133,7 @@ class AssetFolderApiImplTest {
 
         // Assert
         assertThat(response.isSuccess()).isTrue();
-        verify(apiHttpClient).post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), httpEntityCaptor.capture(), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class));
+        verify(apiHttpClient).post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), httpEntityCaptor.capture(), eq(HttpContexts.AUTHORIZED), eq(Void.class));
 
         Map<String, Object> formData = (Map<String, Object>) httpEntityCaptor.getValue().getBody();
         assertThat(formData).containsEntry("class", "assetFolder");
@@ -141,7 +145,7 @@ class AssetFolderApiImplTest {
     @DisplayName("getFolder should handle error response")
     void getFolder_shouldHandleErrorResponse() {
         // Arrange
-        when(apiHttpClient.get(eq(HOST_URL + NORMALIZED_FOLDER_PATH), eq(AUTHORIZABLE_API_REQUEST), eq(AssetElement.class)))
+        when(apiHttpClient.get(eq(HOST_URL + NORMALIZED_FOLDER_PATH), eq(HttpContexts.AUTHORIZED), eq(AssetElement.class)))
                 .thenReturn(assetElementResponse);
         when(assetElementResponse.isSuccess()).thenReturn(false);
         when(assetElementResponse.getErrorMessage()).thenReturn("Error message");
@@ -158,7 +162,7 @@ class AssetFolderApiImplTest {
     @DisplayName("createFolder should handle error response")
     void createFolder_shouldHandleErrorResponse() {
         // Arrange
-        when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), any(ApiHttpEntity.class), eq(AUTHORIZABLE_API_REQUEST), eq(Void.class)))
+        when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
         when(voidResponse.isSuccess()).thenReturn(false);
         when(voidResponse.getErrorMessage()).thenReturn("Error message");

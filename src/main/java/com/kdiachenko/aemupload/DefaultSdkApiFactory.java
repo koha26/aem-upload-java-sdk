@@ -17,7 +17,13 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 /**
  * Default implementation of SdkApiFactory.
  * Creates API instances with injected dependencies.
+ *
+ * @deprecated Use {@link AemUploadSdk#builder()} instead for a simpler and more fluent API.
+ *             This class will be removed in a future major version.
+ * @see AemUploadSdk
  */
+@Deprecated(forRemoval = true)
+@SuppressWarnings("DeprecatedIsStillUsed")
 public class DefaultSdkApiFactory implements SdkApiFactory {
 
     protected final HttpClient5BuilderFactory httpClient5BuilderFactory;

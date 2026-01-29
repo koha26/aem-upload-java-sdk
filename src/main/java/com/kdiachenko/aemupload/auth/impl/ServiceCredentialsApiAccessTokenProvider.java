@@ -3,6 +3,7 @@ package com.kdiachenko.aemupload.auth.impl;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kdiachenko.aemupload.auth.ApiAccessTokenProvider;
+import com.kdiachenko.aemupload.auth.Clock;
 import com.kdiachenko.aemupload.config.ApiAccessTokenConfiguration;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
@@ -14,11 +15,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.time.DateUtils;
 import org.apache.hc.client5.http.classic.methods.HttpPut;
 import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -37,6 +36,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
@@ -49,25 +50,65 @@ import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
 import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 
 @Slf4j
-@RequiredArgsConstructor
 public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenProvider {
 
     private final ApiAccessTokenConfiguration apiAccessTokenConfiguration;
     private final CloseableHttpClient httpClient;
     private final HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory;
+    private final Clock clock;
+
     @Setter(value = AccessLevel.PACKAGE)
     @Getter(value = AccessLevel.PACKAGE)
     private String cachedAccessToken;
     @Setter(value = AccessLevel.PACKAGE)
     @Getter(value = AccessLevel.PACKAGE)
-    private Date expiration;
+    private Instant expiration;
 
+    /**
+     * Creates a provider with default HTTP client and system clock.
+     *
+     * @param apiAccessTokenConfiguration the token configuration
+     */
     public ServiceCredentialsApiAccessTokenProvider(ApiAccessTokenConfiguration apiAccessTokenConfiguration) {
         this(
                 apiAccessTokenConfiguration,
                 HttpClients.createDefault(),
-                ApiHttpClientResponseHandlerFactory.getInstance().createHandler(AccessTokenWrapper.class)
+                ApiHttpClientResponseHandlerFactory.create().createHandler(AccessTokenWrapper.class),
+                Clock.systemClock()
         );
+    }
+
+    /**
+     * Creates a provider with custom dependencies (for testing).
+     *
+     * @param apiAccessTokenConfiguration the token configuration
+     * @param httpClient the HTTP client
+     * @param responseHandlerFactory the response handler
+     */
+    public ServiceCredentialsApiAccessTokenProvider(
+            ApiAccessTokenConfiguration apiAccessTokenConfiguration,
+            CloseableHttpClient httpClient,
+            HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory) {
+        this(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, Clock.systemClock());
+    }
+
+    /**
+     * Creates a provider with all dependencies injected (for testing).
+     *
+     * @param apiAccessTokenConfiguration the token configuration
+     * @param httpClient the HTTP client
+     * @param responseHandlerFactory the response handler
+     * @param clock the clock for time operations
+     */
+    public ServiceCredentialsApiAccessTokenProvider(
+            ApiAccessTokenConfiguration apiAccessTokenConfiguration,
+            CloseableHttpClient httpClient,
+            HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory,
+            Clock clock) {
+        this.apiAccessTokenConfiguration = apiAccessTokenConfiguration;
+        this.httpClient = httpClient;
+        this.responseHandlerFactory = responseHandlerFactory;
+        this.clock = clock;
     }
 
     @Override
@@ -85,12 +126,17 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         }
         log.info("Access token has been received. Expires in: {}", accessToken.expiresIn);
         cachedAccessToken = accessToken.getAccessToken();
-        expiration = DateUtils.addMilliseconds(getDate(), Math.toIntExact(accessToken.getExpiresIn()));
+        expiration = clock.now().plusMillis(accessToken.getExpiresIn());
         return cachedAccessToken;
     }
 
+    /**
+     * Returns the current date.
+     * @deprecated Use the injected Clock instead
+     */
+    @Deprecated(forRemoval = true)
     Date getDate() {
-        return new Date();
+        return Date.from(clock.now());
     }
 
     private String getJWTToken() {
@@ -107,11 +153,12 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
 
     private Claims createClaims() {
         String imsHost = apiAccessTokenConfiguration.getImsEndpoint();
+        Instant expirationTime = clock.now().plusSeconds(apiAccessTokenConfiguration.getTokenLifeTimeInSec());
         Claims jwtClaims = Jwts.claims()
                 .setSubject(apiAccessTokenConfiguration.getId())
                 .setIssuer(apiAccessTokenConfiguration.getOrg())
                 .setAudience("https://" + imsHost + "/c/" + apiAccessTokenConfiguration.getClientId())
-                .setExpiration(DateUtils.addSeconds(getDate(), apiAccessTokenConfiguration.getTokenLifeTimeInSec()));
+                .setExpiration(Date.from(expirationTime));
         apiAccessTokenConfiguration.getMetaScopes().stream()
                 .map(metaScope -> "https://" + imsHost + "/s/" + metaScope)
                 .forEach(value -> jwtClaims.put(value, true));
@@ -175,7 +222,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
     }
 
     private boolean isTokenNotExpired() {
-        return getDate().before(expiration);
+        return expiration != null && clock.now().isBefore(expiration);
     }
 
     private Map<String, String> getFormParams(final String jwtToken) {

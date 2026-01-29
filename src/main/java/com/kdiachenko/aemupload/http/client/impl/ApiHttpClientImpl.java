@@ -42,11 +42,11 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     private final ApiHttpClientResponseHandlerFactory responseHandlerFactory;
 
     public ApiHttpClientImpl(CloseableHttpClient httpClient) {
-        this(httpClient, new JacksonHttpClientSerializer(), ApiHttpClientResponseHandlerFactory.getInstance());
+        this(httpClient, new JacksonHttpClientSerializer(), ApiHttpClientResponseHandlerFactory.create());
     }
 
     public ApiHttpClientImpl(CloseableHttpClient httpClient, ObjectMapper objectMapper) {
-        this(httpClient, new JacksonHttpClientSerializer(objectMapper), ApiHttpClientResponseHandlerFactory.getInstance());
+        this(httpClient, new JacksonHttpClientSerializer(objectMapper), ApiHttpClientResponseHandlerFactory.create());
     }
 
     @Override
@@ -135,7 +135,8 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     private void setFormDataToBody(final HttpEntityContainer request, final Map<?, ?> body) {
         List<NameValuePair> formParams = new ArrayList<>();
-        body.forEach((key, value) -> formParams.add(new BasicNameValuePair(String.valueOf(key), String.valueOf(value))));
+        body.forEach((key, value) ->
+                formParams.add(new BasicNameValuePair(String.valueOf(key), String.valueOf(value))));
         request.setEntity(EntityBuilder.create()
                 .setParameters(formParams)
                 .build());

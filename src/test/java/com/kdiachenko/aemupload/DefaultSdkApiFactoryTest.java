@@ -49,12 +49,10 @@ class DefaultSdkApiFactoryTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     void testConstructor() {
-        verify(httpClient5BuilderFactory).create();
-        verify(httpClientBuilder).build();
-
-        // The factory no longer stores a shared HTTP client, each API gets its own
-        // Verify that APIs can be created successfully
+        // The factory does not create HTTP client in constructor - it creates on demand
+        // Verify that factory can be created successfully
         assertThat(defaultSdkApiFactory).isNotNull();
     }
 

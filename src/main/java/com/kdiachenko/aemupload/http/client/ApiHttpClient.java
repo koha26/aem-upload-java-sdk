@@ -3,16 +3,16 @@ package com.kdiachenko.aemupload.http.client;
 import com.kdiachenko.aemupload.http.entity.ApiHttpContext;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.http.entity.HttpContexts;
 
 import java.util.Map;
 
+/**
+ * HTTP client interface for making API requests.
+ *
+ * <p>This interface abstracts HTTP operations and can be customized or mocked for testing.</p>
+ */
 public interface ApiHttpClient {
-
-    String API_AUTHORIZATION_REQUIRED_REQ_ATTR = "api.authorization.required";
-
-    ApiHttpContext AUTHORIZABLE_API_REQUEST = ApiHttpContext.builder()
-            .attributes(Map.of(API_AUTHORIZATION_REQUIRED_REQ_ATTR, "true"))
-            .build();
 
     <T> ApiHttpResponse<T> get(String url, ApiHttpContext apiHttpContext, Class<T> responseType);
 

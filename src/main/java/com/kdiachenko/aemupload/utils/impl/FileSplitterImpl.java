@@ -1,4 +1,4 @@
-package com.kdiachenko.aemupload.internal.utils;
+package com.kdiachenko.aemupload.utils.impl;
 
 import com.kdiachenko.aemupload.utils.FileSplitter;
 
@@ -34,4 +34,3 @@ public class FileSplitterImpl implements FileSplitter {
         return list;
     }
 }
-

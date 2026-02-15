@@ -9,6 +9,11 @@ import lombok.ToString;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Response from the initiate-upload step of the direct binary upload flow.
+ *
+ * <p>Includes the completion URI, the target folder path, and file upload details.</p>
+ */
 @Data
 @Builder
 @ToString

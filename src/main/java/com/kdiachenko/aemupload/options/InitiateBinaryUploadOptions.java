@@ -5,7 +5,9 @@ import lombok.Value;
 
 /**
  * Options for initiating a binary upload.
- * This is the first step in the direct binary upload process.
+ *
+ * <p>This is the first step in the direct binary upload process and is used
+ * to request upload URIs and a token from AEM.</p>
  */
 @Value
 @Builder(toBuilder = true)

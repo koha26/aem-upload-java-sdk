@@ -2,11 +2,9 @@ package com.kdiachenko.aemupload.config;
 
 import lombok.Builder;
 import lombok.Value;
+import lombok.ToString;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Authentication configuration using Adobe service credentials (JWT).
@@ -14,29 +12,49 @@ import java.util.Objects;
  *
  * <pre>{@code
  * AuthConfig auth = ServiceCredentialsAuthConfig.builder()
- *     .imsEndpoint("ims-na1.adobelogin.com")
+ *     .imsEndpoint("https://ims-na1.adobelogin.com/ims/exchange/jwt")
  *     .clientId("your-client-id")
  *     .clientSecret("your-client-secret")
  *     .technicalAccountId("your-technical-account-id")
  *     .orgId("your-org-id@AdobeOrg")
- *     .privateKeyContent("-----BEGIN RSA PRIVATE KEY-----...")
+ *     .privateKeyContent("-----BEGIN PRIVATE KEY-----...")
  *     .metaScopes(List.of("ent_aem_cloud_api"))
  *     .build();
  * }</pre>
+ *
+ * <p>Note: {@code metaScopes} must not be empty. If {@code tokenLifetimeSeconds} is not set,
+ * it defaults to {@value #DEFAULT_TOKEN_LIFETIME_SECONDS} seconds.</p>
  */
 @Value
 @Builder
+@ToString(exclude = {"clientSecret", "privateKeyContent"})
 public class ServiceCredentialsAuthConfig implements AuthConfig, ApiAccessTokenConfiguration {
+    private static final int DEFAULT_TOKEN_LIFETIME_SECONDS = 86400;
 
+    /**
+     * Adobe IMS token exchange endpoint (full URL).
+     */
     String imsEndpoint;
     String clientId;
     String clientSecret;
     String technicalAccountId;
     String orgId;
     String email;
+    /**
+     * Adobe I/O meta scopes. Must not be empty.
+     */
     List<String> metaScopes;
+    /**
+     * PEM-encoded private key content in PKCS8 format (BEGIN PRIVATE KEY).
+     */
     String privateKeyContent;
+    /**
+     * File path to a PEM-encoded private key in PKCS8 format.
+     */
     String privateKeyFilePath;
+    /**
+     * JWT token lifetime in seconds. Defaults to {@value #DEFAULT_TOKEN_LIFETIME_SECONDS} if not set.
+     */
     int tokenLifetimeSeconds;
 
     private ServiceCredentialsAuthConfig(ServiceCredentialsAuthConfigBuilder builder) {
@@ -86,7 +104,7 @@ public class ServiceCredentialsAuthConfig implements AuthConfig, ApiAccessTokenC
          * Builds the ServiceCredentialsAuthConfig.
          *
          * @return a new ServiceCredentialsAuthConfig instance
-         * @throws IllegalStateException if required fields are missing
+         * @throws IllegalStateException if required fields are missing or invalid
          */
         public ServiceCredentialsAuthConfig build() {
             if (clientId == null || clientId.isBlank()) {
@@ -104,6 +122,12 @@ public class ServiceCredentialsAuthConfig implements AuthConfig, ApiAccessTokenC
             if ((privateKeyContent == null || privateKeyContent.isBlank()) &&
                     (privateKeyFilePath == null || privateKeyFilePath.isBlank())) {
                 throw new IllegalStateException("either privateKeyContent or privateKeyFilePath must be provided");
+            }
+            if (metaScopes == null || metaScopes.isEmpty()) {
+                throw new IllegalStateException("metaScopes must not be null or empty");
+            }
+            if (tokenLifetimeSeconds <= 0) {
+                tokenLifetimeSeconds = DEFAULT_TOKEN_LIFETIME_SECONDS;
             }
             return new ServiceCredentialsAuthConfig(this);
         }

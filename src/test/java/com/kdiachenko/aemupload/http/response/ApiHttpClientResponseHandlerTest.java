@@ -3,7 +3,7 @@ package com.kdiachenko.aemupload.http.response;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
-import com.kdiachenko.aemupload.internal.http.JacksonHttpClientObjectMapper;
+import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicClassicHttpResponse;

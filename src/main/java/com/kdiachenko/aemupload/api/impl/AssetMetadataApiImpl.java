@@ -9,6 +9,8 @@ import com.kdiachenko.aemupload.http.entity.HttpContexts;
 import com.kdiachenko.aemupload.utils.PathNormalizer;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.model.DamAsset;
+import com.kdiachenko.aemupload.exception.SdkError;
+import org.apache.commons.lang3.StringUtils;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,6 +26,9 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
 
     @Override
     public AssetApiResponse<DamAsset> getAssetMetadata(final String assetPath) {
+        if (StringUtils.isBlank(assetPath)) {
+            return AssetApiResponse.fail(SdkError.apiError("assetPath must not be null or blank", 400));
+        }
         ApiHttpResponse<DamAsset> response = apiHttpClient.get(buildAssetMetadataUrl(assetPath),
                 HttpContexts.AUTHORIZED, DamAsset.class);
         return AssetApiResponse.map(response);
@@ -31,6 +36,12 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
 
     @Override
     public AssetApiResponse<Void> updateAssetMetadata(final String assetPath, final Map<String, String> metadata) {
+        if (StringUtils.isBlank(assetPath)) {
+            return AssetApiResponse.fail(SdkError.apiError("assetPath must not be null or blank", 400));
+        }
+        if (metadata == null) {
+            return AssetApiResponse.fail(SdkError.apiError("metadata must not be null", 400));
+        }
         var formData = Map.of("class", "asset", "properties", metadata);
         var httpEntity = ApiHttpEntity.builder().body(formData).build();
         var requestUrl = apiServerConfiguration.getHostUrl() + pathNormalizer.normalize(assetPath);
@@ -41,6 +52,9 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
 
     @Override
     public AssetApiResponse<Void> deleteAsset(final String assetPath) {
+        if (StringUtils.isBlank(assetPath)) {
+            return AssetApiResponse.fail(SdkError.apiError("assetPath must not be null or blank", 400));
+        }
         Map<String, Object> properties = Map.of(":operation", "delete");
         var httpEntity = ApiHttpEntity.builder().body(properties).build();
         var requestUrl = apiServerConfiguration.getHostUrl() + pathNormalizer.normalize(assetPath);
@@ -50,7 +64,7 @@ public class AssetMetadataApiImpl implements AssetMetadataApi {
     }
 
     private String buildAssetMetadataUrl(final String assetPath) {
-        return apiServerConfiguration.getHostUrl() + assetPath + "/jcr:content/metadata.json";
+        return apiServerConfiguration.getHostUrl() + pathNormalizer.normalize(assetPath);
     }
 
 }

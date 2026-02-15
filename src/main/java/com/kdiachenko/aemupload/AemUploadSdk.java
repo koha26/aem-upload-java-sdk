@@ -21,9 +21,9 @@ import com.kdiachenko.aemupload.http.HttpClient5BuilderConfigurator;
 import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
 import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
-import com.kdiachenko.aemupload.internal.http.JacksonHttpClientObjectMapper;
-import com.kdiachenko.aemupload.internal.utils.FileSplitterImpl;
-import com.kdiachenko.aemupload.internal.utils.PathNormalizerImpl;
+import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
+import com.kdiachenko.aemupload.utils.impl.FileSplitterImpl;
+import com.kdiachenko.aemupload.utils.impl.PathNormalizerImpl;
 import com.kdiachenko.aemupload.utils.FileSplitter;
 import com.kdiachenko.aemupload.utils.PathNormalizer;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -185,7 +185,20 @@ public final class AemUploadSdk implements Closeable {
     }
 
     /**
-     * Builder for creating AemUploadSdk instances.
+     * Builder for creating {@link AemUploadSdk} instances.
+     *
+     * <p>Conceptually, the builder collects server configuration and authentication
+     * details, then assembles a ready-to-use SDK with HTTP transport and API clients.</p>
+     *
+     * <p>Example:</p>
+     * <pre>{@code
+     * try (AemUploadSdk sdk = AemUploadSdk.builder()
+     *     .serverUrl("https://author.adobeaemcloud.com")
+     *     .withAccessToken("your-dev-token")
+     *     .build()) {
+     *     sdk.assetFolderApi().createFolder("/content/dam/my-folder").getOrThrow();
+     * }
+     * }</pre>
      */
     public static final class Builder {
         private ApiServerConfiguration serverConfig;

@@ -5,6 +5,12 @@ import lombok.Value;
 
 import java.util.List;
 
+/**
+ * Immutable properties holder for API access token configuration.
+ *
+ * <p>This is a simple value object that can be used for configuration binding
+ * or tests and implements {@link ApiAccessTokenConfiguration}.</p>
+ */
 @Value
 public class ApiAccessTokenProperties implements ApiAccessTokenConfiguration {
     String localDevelopmentAccessToken;

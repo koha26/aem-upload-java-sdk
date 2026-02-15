@@ -27,6 +27,7 @@ import org.apache.hc.core5.http.io.HttpClientResponseHandler;
 import org.apache.hc.core5.http.message.BasicNameValuePair;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -76,8 +77,8 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
      * Creates a provider with custom dependencies (for testing).
      *
      * @param apiAccessTokenConfiguration the token configuration
-     * @param httpClient the HTTP client
-     * @param responseHandlerFactory the response handler
+     * @param httpClient                  the HTTP client
+     * @param responseHandlerFactory      the response handler
      */
     public ServiceCredentialsApiAccessTokenProvider(
             ApiAccessTokenConfiguration apiAccessTokenConfiguration,
@@ -90,9 +91,9 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
      * Creates a provider with all dependencies injected (for testing).
      *
      * @param apiAccessTokenConfiguration the token configuration
-     * @param httpClient the HTTP client
-     * @param responseHandlerFactory the response handler
-     * @param clock the clock for time operations
+     * @param httpClient                  the HTTP client
+     * @param responseHandlerFactory      the response handler
+     * @param clock                       the clock for time operations
      */
     public ServiceCredentialsApiAccessTokenProvider(
             ApiAccessTokenConfiguration apiAccessTokenConfiguration,
@@ -106,10 +107,10 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
      * Creates a provider with all dependencies injected (for testing).
      *
      * @param apiAccessTokenConfiguration the token configuration
-     * @param httpClient the HTTP client
-     * @param responseHandlerFactory the response handler
-     * @param clock the clock for time operations
-     * @param tokenCache token cache implementation
+     * @param httpClient                  the HTTP client
+     * @param responseHandlerFactory      the response handler
+     * @param clock                       the clock for time operations
+     * @param tokenCache                  token cache implementation
      */
     public ServiceCredentialsApiAccessTokenProvider(
             ApiAccessTokenConfiguration apiAccessTokenConfiguration,
@@ -139,12 +140,13 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             return null;
         }
         log.info("Access token has been received. Expires in: {}", accessToken.expiresIn);
-        tokenCache.put(accessToken.getAccessToken(), Duration.ofMillis(accessToken.getExpiresIn()));
+        tokenCache.put(accessToken.getAccessToken(), Duration.ofSeconds(accessToken.getExpiresIn()));
         return accessToken.getAccessToken();
     }
 
     /**
      * Returns the current date.
+     *
      * @deprecated Use the injected Clock instead
      */
     @Deprecated(forRemoval = true)
@@ -165,7 +167,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
     }
 
     private Claims createClaims() {
-        String imsHost = apiAccessTokenConfiguration.getImsEndpoint();
+        String imsHost = getImsHost();
         Instant expirationTime = clock.now().plusSeconds(apiAccessTokenConfiguration.getTokenLifeTimeInSec());
         Claims jwtClaims = Jwts.claims()
                 .setSubject(apiAccessTokenConfiguration.getId())
@@ -176,6 +178,23 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
                 .map(metaScope -> "https://" + imsHost + "/s/" + metaScope)
                 .forEach(value -> jwtClaims.put(value, true));
         return jwtClaims;
+    }
+
+    /**
+     * Extracts IMS host from the configured endpoint URL.
+     * Falls back to the raw value if it isn't a valid URI.
+     */
+    private String getImsHost() {
+        String imsEndpoint = apiAccessTokenConfiguration.getImsEndpoint();
+        if (imsEndpoint == null) {
+            return null;
+        }
+        try {
+            URI uri = URI.create(imsEndpoint);
+            return uri.getHost() != null ? uri.getHost() : imsEndpoint;
+        } catch (IllegalArgumentException e) {
+            return imsEndpoint;
+        }
     }
 
     private RSAPrivateKey getRsaPrivateKey() {
@@ -251,6 +270,9 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         private String accessToken;
         @JsonProperty("token_type")
         private String tokenType;
+        /**
+         * Token lifetime in seconds as returned by IMS.
+         */
         @JsonProperty("expires_in")
         private long expiresIn;
     }

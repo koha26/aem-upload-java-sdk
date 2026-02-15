@@ -13,6 +13,12 @@ import org.apache.hc.core5.http.io.entity.EntityUtils;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * Apache HttpClient response handler that maps HTTP responses into {@link ApiHttpResponse}.
+ *
+ * <p>Uses the provided {@link com.kdiachenko.aemupload.http.client.HttpClientObjectMapper}
+ * to deserialize successful responses and to serialize error payloads.</p>
+ */
 @Slf4j
 @AllArgsConstructor
 public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseHandler<ApiHttpResponse<T>> {
@@ -42,7 +48,7 @@ public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseH
         try {
             final HttpEntity entity = response.getEntity();
             if (response.getCode() >= HttpStatus.SC_REDIRECTION) {
-                String responseBody = EntityUtils.toString(entity);
+                String responseBody = entity != null ? EntityUtils.toString(entity) : "";
                 Map<Object, Object> errorObject = Map.of(
                         "apiResponse", responseBody,
                         "reasonPhrase", response.getReasonPhrase()

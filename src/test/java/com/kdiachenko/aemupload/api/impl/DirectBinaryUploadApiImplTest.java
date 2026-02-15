@@ -5,7 +5,7 @@ import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.http.entity.HttpContexts;
-import com.kdiachenko.aemupload.internal.utils.FileSplitterImpl;
+import com.kdiachenko.aemupload.utils.impl.FileSplitterImpl;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.options.CompleteBinaryUploadOptions;
 import com.kdiachenko.aemupload.options.CompleteUploadResponse;

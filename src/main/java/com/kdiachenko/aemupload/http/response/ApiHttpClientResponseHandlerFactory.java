@@ -1,7 +1,7 @@
 package com.kdiachenko.aemupload.http.response;
 
 import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
-import com.kdiachenko.aemupload.internal.http.JacksonHttpClientObjectMapper;
+import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
 
 /**
  * Factory for creating HTTP response handlers.

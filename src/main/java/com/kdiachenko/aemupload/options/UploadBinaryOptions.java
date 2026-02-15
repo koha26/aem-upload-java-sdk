@@ -11,7 +11,9 @@ import java.util.List;
 
 /**
  * Options for uploading binary content to cloud storage.
- * This is the second step in the direct binary upload process.
+ *
+ * <p>This is the second step in the direct binary upload process and uses the
+ * upload URIs returned by the initiate step.</p>
  */
 @Value
 @Builder(toBuilder = true)

@@ -7,6 +7,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Metadata fields for a DAM asset as returned by AEM.
+ *
+ * <p>Includes common DAM and Scene7 metadata fields used in asset responses.</p>
+ */
 @Data
 @Builder
 @NoArgsConstructor

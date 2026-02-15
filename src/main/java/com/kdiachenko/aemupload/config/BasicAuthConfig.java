@@ -37,4 +37,9 @@ public class BasicAuthConfig implements AuthConfig {
     public String getAuthType() {
         return "BasicAuth";
     }
+
+    @Override
+    public String toString() {
+        return "BasicAuthConfig{username=" + username + ", password=[****]}";
+    }
 }

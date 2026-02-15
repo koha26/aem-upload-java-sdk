@@ -1,12 +1,11 @@
-package com.kdiachenko.aemupload.internal.http;
+package com.kdiachenko.aemupload.http.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.exception.SerializationException;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Jackson-based implementation of the Serializer interface.
+ * Jackson-based implementation of {@link HttpClientObjectMapper}.
  */
 @RequiredArgsConstructor
 public class JacksonHttpClientObjectMapper implements HttpClientObjectMapper {
@@ -34,4 +33,3 @@ public class JacksonHttpClientObjectMapper implements HttpClientObjectMapper {
         }
     }
 }
-

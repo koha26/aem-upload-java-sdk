@@ -4,8 +4,22 @@ import com.kdiachenko.aemupload.api.builder.BaseApiBuilder;
 import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.api.impl.AssetFolderApiImpl;
 import com.kdiachenko.aemupload.utils.PathNormalizer;
-import com.kdiachenko.aemupload.internal.utils.PathNormalizerImpl;
+import com.kdiachenko.aemupload.utils.impl.PathNormalizerImpl;
 
+/**
+ * Builder for creating {@link AssetFolderApi} instances.
+ *
+ * <p>Conceptually, this builder assembles the API with HTTP transport,
+ * server configuration, and a path normalization strategy.</p>
+ *
+ * <p>Example:</p>
+ * <pre>{@code
+ * AssetFolderApi api = AssetFolderApiBuilder.builder(serverConfig)
+ *     .withHttpClient(httpClient)
+ *     .withPathNormalizer(new PathNormalizerImpl())
+ *     .build();
+ * }</pre>
+ */
 public class AssetFolderApiBuilder extends BaseApiBuilder<AssetFolderApiBuilder> {
     private PathNormalizer pathNormalizer;
 

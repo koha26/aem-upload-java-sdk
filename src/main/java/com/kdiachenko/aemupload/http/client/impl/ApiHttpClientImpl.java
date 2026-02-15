@@ -1,9 +1,8 @@
 package com.kdiachenko.aemupload.http.client.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.exception.SerializationException;
-import com.kdiachenko.aemupload.internal.http.JacksonHttpClientObjectMapper;
+import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpContext;
@@ -141,15 +140,15 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     private <T> void setInputStreamToBody(final HttpEntityContainer request,
                                           final ApiHttpEntity<T> entity, InputStream body) {
-        try {
-            request.setEntity(EntityBuilder.create()
-                    .setBinary(toByteArray(body))
-                    .setContentType(ContentType.create(entity.getHeaders().get(HttpHeaders.CONTENT_TYPE)))
-                    .build());
-        } catch (IOException e) {
-            log.error("Failed to serialize request body of Input Stream type", e);
-            throw new UncheckedIOException(e);
-        }
+        Map<String, String> headers = entity.getHeaders();
+        String contentTypeHeader = headers != null ? headers.get(HttpHeaders.CONTENT_TYPE) : null;
+        ContentType contentType = contentTypeHeader != null
+                ? ContentType.parse(contentTypeHeader)
+                : ContentType.APPLICATION_OCTET_STREAM;
+        request.setEntity(EntityBuilder.create()
+                .setStream(body)
+                .setContentType(contentType)
+                .build());
     }
 
     private <R> ApiHttpResponse<R> safeExecute(final Supplier<ApiHttpResponse<R>> request) {
@@ -166,10 +165,6 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     private <E> void setHeaders(final HttpUriRequestBase httpRequest, final ApiHttpEntity<E> entity) {
         entity.getHeaders().forEach(httpRequest::setHeader);
-    }
-
-    private byte[] toByteArray(final InputStream inputStream) throws IOException {
-        return inputStream.readAllBytes();
     }
 
 }

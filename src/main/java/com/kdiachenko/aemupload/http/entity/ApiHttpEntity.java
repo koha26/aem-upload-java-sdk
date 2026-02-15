@@ -8,6 +8,11 @@ import lombok.NoArgsConstructor;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Container for HTTP request bodies and headers used by the SDK.
+ *
+ * @param <T> the body type
+ */
 @Data
 @Builder
 @NoArgsConstructor

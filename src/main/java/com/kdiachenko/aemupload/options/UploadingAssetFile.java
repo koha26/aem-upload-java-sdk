@@ -9,6 +9,11 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Describes an individual file entry returned by the initiate-upload step.
+ *
+ * <p>This object includes the upload token and target URIs for multipart upload.</p>
+ */
 @Data
 @Builder
 @AllArgsConstructor

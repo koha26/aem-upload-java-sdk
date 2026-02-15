@@ -5,6 +5,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * HTTP response wrapper used by the SDK internal HTTP client.
+ *
+ * @param <T> deserialized body type
+ */
 @Data
 @SuperBuilder
 @NoArgsConstructor

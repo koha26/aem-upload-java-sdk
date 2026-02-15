@@ -7,6 +7,12 @@ import lombok.Data;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents a generic asset element returned by the AEM Assets API.
+ *
+ * <p>Used primarily by {@link com.kdiachenko.aemupload.api.AssetFolderApi} to model
+ * folder responses and their properties.</p>
+ */
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AssetElement {

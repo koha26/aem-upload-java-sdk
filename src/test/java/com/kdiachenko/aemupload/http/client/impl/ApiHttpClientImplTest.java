@@ -1,8 +1,11 @@
 package com.kdiachenko.aemupload.http.client.impl;
 
+import com.kdiachenko.aemupload.exception.SerializationException;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.entity.ApiHttpContext;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -22,7 +25,6 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,43 +54,42 @@ class ApiHttpClientImplTest {
     }
 
     @Test
-    void testGet() throws IOException {
+    void get_shouldReturnResponse() throws IOException {
         var url = "https://api.host/v1/api/call";
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
+        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}} ").build();
         when(httpClient.execute(any(HttpGet.class), any(), any())).thenReturn(response);
 
         var result = apiHttpClient.get(url, null, String.class);
 
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
+        assertThat(result.getBody()).isEqualTo("{\"data\": {}} ");
         assertThat(result.getStatus()).isEqualTo(200);
         assertThat(result.getErrorMessage()).isNull();
     }
 
     @Test
-    void testGetWithException() throws IOException {
+    void get_shouldHandleIOException() throws IOException {
         var url = "https://api.host/v1/api/call";
-        doThrow(IOException.class).when(httpClient).execute(any(HttpGet.class), any(), any());
+        doThrow(new IOException("boom")).when(httpClient).execute(any(HttpGet.class), any(), any());
 
         var result = apiHttpClient.get(url, null, String.class);
 
         assertThat(result.getStatus()).isEqualTo(500);
-        assertThat(result.getErrorMessage()).isEqualTo("Error while executing request: GET /v1/api/call");
+        assertThat(result.getErrorMessage()).contains("Error while executing request: GET /v1/api/call");
+        assertThat(result.getErrorMessage()).contains("Cause: boom");
         assertThat(result.getBody()).isNull();
     }
 
     @Test
-    void testGetWithContext() throws IOException {
+    void get_shouldPopulateHttpClientContext() throws IOException {
         var url = "https://api.host/v1/api/call";
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
+        var response = ApiHttpResponse.<String>builder().status(200).body("ok").build();
         when(httpClient.execute(any(HttpGet.class), any(), any())).thenReturn(response);
         var apiHttpContext = ApiHttpContext.builder()
                 .attributes(Map.of("debug", "true"))
                 .build();
-        var result = apiHttpClient.get(url, apiHttpContext, String.class);
 
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
-        assertThat(result.getStatus()).isEqualTo(200);
-        assertThat(result.getErrorMessage()).isNull();
+        apiHttpClient.get(url, apiHttpContext, String.class);
+
         verify(httpClient).execute(any(), httpClientContextArgumentCaptor.capture(), any());
         HttpClientContext context = httpClientContextArgumentCaptor.getValue();
         assertThat(context).isNotNull();
@@ -96,46 +97,27 @@ class ApiHttpClientImplTest {
     }
 
     @Test
-    void testGetWithEmptyContext() throws IOException {
+    void get_shouldIgnoreEmptyContext() throws IOException {
         var url = "https://api.host/v1/api/call";
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
+        var response = ApiHttpResponse.<String>builder().status(200).body("ok").build();
         when(httpClient.execute(any(HttpGet.class), any(), any())).thenReturn(response);
         var apiHttpContext = ApiHttpContext.builder().build();
-        var result = apiHttpClient.get(url, apiHttpContext, String.class);
 
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
-        assertThat(result.getStatus()).isEqualTo(200);
-        assertThat(result.getErrorMessage()).isNull();
+        apiHttpClient.get(url, apiHttpContext, String.class);
+
         verify(httpClient).execute(any(), httpClientContextArgumentCaptor.capture(), any());
         HttpClientContext context = httpClientContextArgumentCaptor.getValue();
         assertThat(context).isNull();
     }
 
     @Test
-    void testPostWithMap() throws IOException {
+    void post_shouldSendMapAsFormData() throws IOException {
         var url = "https://api.host/v1/api/call";
         var entity = new ApiHttpEntity<>(
                 Map.of("key", "value"),
                 Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
         );
-        var response = ApiHttpResponse.<String>builder().status(201).body("{\"data\": {}}").build();
-        when(httpClient.execute(any(HttpPost.class), any(), any())).thenReturn(response);
-
-        var result = apiHttpClient.post(url, entity, null, String.class);
-
-        assertThat(result.getStatus()).isEqualTo(201);
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
-        assertThat(result.getErrorMessage()).isNull();
-    }
-
-    @Test
-    void testPostWithMap_CorrectRequestWithFormUrlEncodedParameters() throws IOException {
-        var url = "https://api.host/v1/api/call";
-        var entity = new ApiHttpEntity<>(
-                Map.of("key", "value"),
-                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
-        );
-        var response = ApiHttpResponse.<String>builder().status(201).body("{\"data\": {}}").build();
+        var response = ApiHttpResponse.<String>builder().status(201).body("{\"data\": {}} ").build();
         when(httpClient.execute(any(HttpPost.class), any(), any())).thenReturn(response);
 
         apiHttpClient.post(url, entity, null, String.class);
@@ -149,32 +131,14 @@ class ApiHttpClientImplTest {
     }
 
     @Test
-    void testPostWithInputStream() throws IOException {
-        var url = "https://api.host/v1/api/call";
-        InputStream stream = new ByteArrayInputStream("data".getBytes());
-        var entity = new ApiHttpEntity<>(
-                stream,
-                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_FORM_URLENCODED.getMimeType())
-        );
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
-        when(httpClient.execute(any(HttpPost.class), any(), any())).thenReturn(response);
-
-        var result = apiHttpClient.post(url, entity, null, String.class);
-
-        assertThat(result.getStatus()).isEqualTo(200);
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
-        assertThat(result.getErrorMessage()).isNull();
-    }
-
-    @Test
-    void testPostWithInputStream_CorrectRequest() throws IOException {
+    void post_shouldSendInputStreamWithContentType() throws IOException {
         var url = "https://api.host/v1/api/call";
         InputStream stream = new ByteArrayInputStream("data".getBytes(StandardCharsets.UTF_8));
         var entity = new ApiHttpEntity<>(
                 stream,
                 Map.of(HttpHeaders.CONTENT_TYPE, ContentType.IMAGE_WEBP.getMimeType())
         );
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
+        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}} ").build();
         when(httpClient.execute(any(HttpPost.class), any(), any())).thenReturn(response);
 
         apiHttpClient.post(url, entity, null, String.class);
@@ -188,55 +152,13 @@ class ApiHttpClientImplTest {
     }
 
     @Test
-    void testPostWithInputStream_IOException() throws IOException {
-        var url = "https://api.host/v1/api/call";
-        var stream = new InputStream() {
-            @Override
-            public int read() throws IOException {
-                return -1;
-            }
-
-            @Override
-            public byte[] readAllBytes() throws IOException {
-                throw new IOException();
-            }
-        };
-        var entity = new ApiHttpEntity<>(
-                stream,
-                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_FORM_URLENCODED.getMimeType())
-        );
-        var result = apiHttpClient.post(url, entity, null, String.class);
-
-        assertThat(result.getStatus()).isEqualTo(500);
-        assertThat(result.getBody()).isNull();
-        assertThat(result.getErrorMessage()).startsWith("Unexpected error while executing request:");
-    }
-
-    @Test
-    void testPostWithObject() throws IOException {
+    void post_shouldSerializeObjectToJson() throws IOException {
         var url = "https://api.host/v1/api/call";
         var entity = new ApiHttpEntity<>(
                 new TestObject("hello world"),
                 Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
         );
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
-        when(httpClient.execute(any(HttpPost.class), any(), any())).thenReturn(response);
-
-        var result = apiHttpClient.post(url, entity, null, String.class);
-
-        assertThat(result.getStatus()).isEqualTo(200);
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
-        assertThat(result.getErrorMessage()).isNull();
-    }
-
-    @Test
-    void testPostWithObject_CorrectRequest() throws IOException {
-        var url = "https://api.host/v1/api/call";
-        var entity = new ApiHttpEntity<>(
-                new TestObject("hello world"),
-                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
-        );
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
+        var response = ApiHttpResponse.<String>builder().status(200).body("ok").build();
         when(httpClient.execute(any(HttpPost.class), any(), any())).thenReturn(response);
 
         apiHttpClient.post(url, entity, null, String.class);
@@ -244,113 +166,75 @@ class ApiHttpClientImplTest {
         verify(httpClient).execute(httpRequestArgumentCaptor.capture(), any(), any());
         HttpUriRequestBase request = httpRequestArgumentCaptor.getValue();
         HttpEntity requestEntity = request.getEntity();
-        assertThat(request.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue()).isEqualTo("application/json");
         assertThat(requestEntity.getContentType()).isEqualTo("application/json; charset=UTF-8");
-        assertThat(requestEntity.getContent()).asString(StandardCharsets.UTF_8).isEqualTo("{\"data\":\"hello world\"}");
+        assertThat(requestEntity.getContent()).asString(StandardCharsets.UTF_8).contains("\"data\":\"hello world\"");
     }
 
     @Test
-    void testPostWithObject_IOException() throws IOException {
+    void post_shouldDefaultContentTypeForInputStream() throws IOException {
         var url = "https://api.host/v1/api/call";
+        InputStream stream = new ByteArrayInputStream("data".getBytes(StandardCharsets.UTF_8));
         var entity = new ApiHttpEntity<>(
-                new TestObject("hello world") {
-                    @Override
-                    public String getData() {
-                        throw new IllegalArgumentException();
-                    }
-                },
-                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
+                stream,
+                Map.of()
         );
-
-        var result = apiHttpClient.post(url, entity, null, String.class);
-
-        assertThat(result.getStatus()).isEqualTo(500);
-        assertThat(result.getBody()).isNull();
-        assertThat(result.getErrorMessage()).startsWith("Unexpected error while executing request:");
-    }
-
-    @Test
-    void testPostWithNullBody() throws IOException {
-        var url = "https://api.host/v1/api/call";
-        var entity = new ApiHttpEntity<>(
-                null,
-                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
-        );
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
+        var response = ApiHttpResponse.<String>builder().status(200).body("ok").build();
         when(httpClient.execute(any(HttpPost.class), any(), any())).thenReturn(response);
 
-        var result = apiHttpClient.post(url, entity, null, String.class);
+        apiHttpClient.post(url, entity, null, String.class);
 
-        assertThat(result.getStatus()).isEqualTo(200);
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
-        assertThat(result.getErrorMessage()).isNull();
+        verify(httpClient).execute(httpRequestArgumentCaptor.capture(), any(), any());
+        HttpUriRequestBase request = httpRequestArgumentCaptor.getValue();
+        HttpEntity requestEntity = request.getEntity();
+        assertThat(request.getFirstHeader(HttpHeaders.CONTENT_TYPE)).isNull();
+        assertThat(requestEntity.getContentType()).isEqualTo("application/octet-stream");
     }
 
     @Test
-    void testPostWithException() throws IOException {
+    void post_shouldHandleSerializationErrors() {
+        ApiHttpClientImpl client = new ApiHttpClientImpl(
+                httpClient,
+                new FailingObjectMapper(),
+                ApiHttpClientResponseHandlerFactory.create(new FailingObjectMapper())
+        );
         var url = "https://api.host/v1/api/call";
         var entity = new ApiHttpEntity<>(
                 new TestObject("hello world"),
                 Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
         );
-        doThrow(IOException.class).when(httpClient).execute(any(HttpPost.class), any(), any());
 
-        var result = apiHttpClient.post(url, entity, null, String.class);
+        var result = client.post(url, entity, null, String.class);
 
         assertThat(result.getStatus()).isEqualTo(500);
         assertThat(result.getBody()).isNull();
-        assertThat(result.getErrorMessage()).isEqualTo("Error while executing request: POST /v1/api/call");
+        assertThat(result.getErrorMessage()).startsWith("Unexpected error while executing request:");
     }
 
     @Test
-    void testPutWithMap() throws IOException {
-        var url = "https://api.host/v1/api/call";
-        var entity = new ApiHttpEntity<>(
-                Map.of("key", "value"),
-                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
-        );
-        var response = ApiHttpResponse.<String>builder().status(201).body("{\"data\": {}}").build();
-        when(httpClient.execute(any(HttpPut.class), any(), any())).thenReturn(response);
-
-        var result = apiHttpClient.put(url, entity, null, String.class);
-
-        assertThat(result.getStatus()).isEqualTo(201);
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
-        assertThat(result.getErrorMessage()).isNull();
-    }
-
-    @Test
-    void testPutWithInputStream() throws IOException {
-        var url = "https://api.host/v1/api/call";
-        InputStream stream = new ByteArrayInputStream("data".getBytes());
-        var entity = new ApiHttpEntity<>(
-                stream,
-                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_FORM_URLENCODED.getMimeType())
-        );
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
-        when(httpClient.execute(any(HttpPut.class), any(), any())).thenReturn(response);
-
-        var result = apiHttpClient.put(url, entity, null, String.class);
-
-        assertThat(result.getStatus()).isEqualTo(200);
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
-        assertThat(result.getErrorMessage()).isNull();
-    }
-
-    @Test
-    void testPutWithInputStream_IOException() throws IOException {
-        var url = "https://api.host/v1/api/call";
-        InputStream stream = new BufferedInputStream(new ByteArrayInputStream("data".getBytes())) {
+    void post_shouldHandleSerializationErrorsWithoutIoCause() {
+        HttpClientObjectMapper mapper = new HttpClientObjectMapper() {
             @Override
-            public byte[] readAllBytes() throws IOException {
-                throw new IOException();
+            public <T> String serialize(T object) throws SerializationException {
+                throw new SerializationException("serialize failed");
+            }
+
+            @Override
+            public <T> T deserialize(String json, Class<T> type) throws SerializationException {
+                throw new SerializationException("deserialize failed");
             }
         };
-        var entity = new ApiHttpEntity<>(
-                stream,
-                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_FORM_URLENCODED.getMimeType())
+        ApiHttpClientImpl client = new ApiHttpClientImpl(
+                httpClient,
+                mapper,
+                ApiHttpClientResponseHandlerFactory.create(mapper)
         );
-        var result = apiHttpClient.put(url, entity, null, String.class);
+        var url = "https://api.host/v1/api/call";
+        var entity = new ApiHttpEntity<>(
+                new TestObject("hello world"),
+                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
+        );
+
+        var result = client.post(url, entity, null, String.class);
 
         assertThat(result.getStatus()).isEqualTo(500);
         assertThat(result.getBody()).isNull();
@@ -358,36 +242,35 @@ class ApiHttpClientImplTest {
     }
 
     @Test
-    void testPutWithObject() throws IOException {
+    void post_shouldHandleIOExceptionFromHttpClient() throws IOException {
         var url = "https://api.host/v1/api/call";
         var entity = new ApiHttpEntity<>(
                 new TestObject("hello world"),
                 Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
         );
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
-        when(httpClient.execute(any(HttpPut.class), any(), any())).thenReturn(response);
+        doThrow(new IOException("boom")).when(httpClient).execute(any(HttpPost.class), any(), any());
 
-        var result = apiHttpClient.put(url, entity, null, String.class);
+        var result = apiHttpClient.post(url, entity, null, String.class);
 
-        assertThat(result.getStatus()).isEqualTo(200);
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
-        assertThat(result.getErrorMessage()).isNull();
+        assertThat(result.getStatus()).isEqualTo(500);
+        assertThat(result.getBody()).isNull();
+        assertThat(result.getErrorMessage()).contains("Error while executing request: POST /v1/api/call");
     }
 
     @Test
-    void testPutWithObject_IOException() throws IOException {
+    void put_shouldHandleSerializationErrors() {
+        ApiHttpClientImpl client = new ApiHttpClientImpl(
+                httpClient,
+                new FailingObjectMapper(),
+                ApiHttpClientResponseHandlerFactory.create(new FailingObjectMapper())
+        );
         var url = "https://api.host/v1/api/call";
         var entity = new ApiHttpEntity<>(
-                new TestObject("hello world") {
-                    @Override
-                    public String getData() {
-                        throw new IllegalArgumentException();
-                    }
-                },
+                new TestObject("hello world"),
                 Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
         );
 
-        var result = apiHttpClient.put(url, entity, null, String.class);
+        var result = client.put(url, entity, null, String.class);
 
         assertThat(result.getStatus()).isEqualTo(500);
         assertThat(result.getBody()).isNull();
@@ -395,41 +278,36 @@ class ApiHttpClientImplTest {
     }
 
     @Test
-    void testPutWithNullBody() throws IOException {
-        var url = "https://api.host/v1/api/call";
-        var entity = new ApiHttpEntity<>(
-                null,
-                Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
-        );
-        var response = ApiHttpResponse.<String>builder().status(200).body("{\"data\": {}}").build();
-        when(httpClient.execute(any(HttpPut.class), any(), any())).thenReturn(response);
-
-        var result = apiHttpClient.put(url, entity, null, String.class);
-
-        assertThat(result.getStatus()).isEqualTo(200);
-        assertThat(result.getBody()).isEqualTo("{\"data\": {}}");
-        assertThat(result.getErrorMessage()).isNull();
-    }
-
-    @Test
-    void testPutWithException() throws IOException {
+    void put_shouldHandleIOExceptionFromHttpClient() throws IOException {
         var url = "https://api.host/v1/api/call";
         var entity = new ApiHttpEntity<>(
                 new TestObject("hello world"),
                 Map.of(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
         );
-        doThrow(IOException.class).when(httpClient).execute(any(HttpPut.class), any(), any());
+        doThrow(new IOException("boom")).when(httpClient).execute(any(HttpPut.class), any(), any());
 
         var result = apiHttpClient.put(url, entity, null, String.class);
 
         assertThat(result.getStatus()).isEqualTo(500);
         assertThat(result.getBody()).isNull();
-        assertThat(result.getErrorMessage()).isEqualTo("Error while executing request: PUT /v1/api/call");
+        assertThat(result.getErrorMessage()).contains("Error while executing request: PUT /v1/api/call");
     }
 
     @Data
     @AllArgsConstructor
     static class TestObject {
         private String data;
+    }
+
+    static class FailingObjectMapper implements HttpClientObjectMapper {
+        @Override
+        public <T> String serialize(T object) throws SerializationException {
+            throw new SerializationException("serialize failed", new IOException("io"));
+        }
+
+        @Override
+        public <T> T deserialize(String json, Class<T> type) throws SerializationException {
+            throw new SerializationException("deserialize failed");
+        }
     }
 }

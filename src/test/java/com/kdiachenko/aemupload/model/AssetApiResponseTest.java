@@ -15,186 +15,139 @@ class AssetApiResponseTest {
 
     @Test
     void success_shouldCreateSuccessResponse() {
-        // Given
-        String testBody = "Test Body";
+        AssetApiResponse<String> response = AssetApiResponse.success("Test Body");
 
-        // When
-        AssetApiResponse<String> response = AssetApiResponse.success(testBody);
-
-        // Then
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.isFailure()).isFalse();
-        assertThat(response.getBody()).isEqualTo(testBody);
-        assertThat(response.getErrorMessage()).isNull();
+        assertThat(response.getBody()).isEqualTo("Test Body");
         assertThat(response.getError()).isEmpty();
     }
 
     @Test
     void fail_shouldCreateFailureResponse() {
-        // Given
-        String errorMessage = "Error occurred";
+        SdkError error = SdkError.builder(SdkError.ErrorCode.UNKNOWN_ERROR, "Error occurred").build();
 
-        // When
-        AssetApiResponse<String> response = AssetApiResponse.fail(SdkError.builder(SdkError.ErrorCode.UNKNOWN_ERROR, errorMessage).build());
+        AssetApiResponse<String> response = AssetApiResponse.fail(error);
 
-        // Then
         assertThat(response.isSuccess()).isFalse();
         assertThat(response.isFailure()).isTrue();
         assertThat(response.getBody()).isNull();
-        assertThat(response.getErrorMessage()).isEqualTo(errorMessage);
-        assertThat(response.getError()).isPresent();
+        assertThat(response.getError()).contains(error);
     }
 
     @Test
-    void failWithSdkError_shouldCreateFailureResponseWithTypedError() {
-        // Given
-        SdkError error = SdkError.apiError("API failed", 500);
+    void map_shouldHandleNullHttpResponse() {
+        AssetApiResponse<String> response = AssetApiResponse.map((ApiHttpResponse<String>) null);
 
-        // When
-        AssetApiResponse<String> response = AssetApiResponse.fail(error);
-
-        // Then
-        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.isFailure()).isTrue();
         assertThat(response.getError()).isPresent();
-        assertThat(response.getError().get().getErrorCode()).isEqualTo(SdkError.ErrorCode.API_ERROR);
-        assertThat(response.getError().get().getHttpStatus()).isEqualTo(500);
     }
 
     @Test
     void map_shouldMapSuccessfulHttpResponse() {
-        // Given
-        String testBody = "Test Body";
         ApiHttpResponse<String> httpResponse = ApiHttpResponse.<String>builder()
                 .status(200)
-                .body(testBody)
+                .body("Test Body")
                 .build();
 
-        // When
         AssetApiResponse<String> response = AssetApiResponse.map(httpResponse);
 
-        // Then
         assertThat(response.isSuccess()).isTrue();
-        assertThat(response.getBody()).isEqualTo(testBody);
-        assertThat(response.getErrorMessage()).isNull();
+        assertThat(response.getBody()).isEqualTo("Test Body");
     }
 
     @Test
-    void map_shouldMapFailedHttpResponse() {
-        // Given
-        String errorMessage = "Error occurred";
+    void map_shouldMapFailedHttpResponse_withMessage() {
         ApiHttpResponse<String> httpResponse = ApiHttpResponse.<String>builder()
                 .status(400)
-                .errorMessage(errorMessage)
+                .errorMessage("Error occurred")
                 .build();
 
-        // When
         AssetApiResponse<String> response = AssetApiResponse.map(httpResponse);
 
-        // Then
         assertThat(response.isSuccess()).isFalse();
-        assertThat(response.getBody()).isNull();
-        assertThat(response.getErrorMessage()).isEqualTo(errorMessage);
+        assertThat(response.getError()).isPresent();
+        assertThat(response.getError().get().getMessage()).contains("Error occurred");
+    }
+
+    @Test
+    void map_shouldMapFailedHttpResponse_withoutMessage() {
+        ApiHttpResponse<String> httpResponse = ApiHttpResponse.<String>builder()
+                .status(500)
+                .build();
+
+        AssetApiResponse<String> response = AssetApiResponse.map(httpResponse);
+
+        assertThat(response.isFailure()).isTrue();
+        assertThat(response.getError().get().getMessage()).contains("Request failed with status 500");
     }
 
     @Test
     void getOrThrow_shouldReturnBodyOnSuccess() {
-        // Given
         AssetApiResponse<String> response = AssetApiResponse.success("value");
 
-        // When
-        String result = response.getOrThrow();
-
-        // Then
-        assertThat(result).isEqualTo("value");
+        assertThat(response.getOrThrow()).isEqualTo("value");
     }
 
     @Test
     void getOrThrow_shouldThrowOnFailure() {
-        // Given
         SdkError error = SdkError.apiError("API failed", 404);
         AssetApiResponse<String> response = AssetApiResponse.fail(error);
 
-        // Then
         assertThatThrownBy(response::getOrThrow)
                 .isInstanceOf(SdkException.class)
                 .hasMessageContaining("API failed");
     }
 
     @Test
-    void getOrElse_shouldReturnBodyOnSuccess() {
-        // Given
-        AssetApiResponse<String> response = AssetApiResponse.success("value");
+    void getOrElse_shouldReturnBodyOnSuccessAndDefaultOnFailure() {
+        AssetApiResponse<String> success = AssetApiResponse.success("value");
+        AssetApiResponse<String> failure = AssetApiResponse.fail(
+                SdkError.builder(SdkError.ErrorCode.UNKNOWN_ERROR, "error").build());
 
-        // When
-        String result = response.getOrElse("default");
-
-        // Then
-        assertThat(result).isEqualTo("value");
+        assertThat(success.getOrElse("default")).isEqualTo("value");
+        assertThat(failure.getOrElse("default")).isEqualTo("default");
     }
 
     @Test
-    void getOrElse_shouldReturnDefaultOnFailure() {
-        // Given
-        AssetApiResponse<String> response = AssetApiResponse.fail(SdkError.builder(SdkError.ErrorCode.UNKNOWN_ERROR, "error").build());
+    void map_and_flatMap_shouldTransformOnSuccessAndPreserveErrorOnFailure() {
+        AssetApiResponse<String> success = AssetApiResponse.success("hello");
+        AssetApiResponse<String> failure = AssetApiResponse.fail(
+                SdkError.builder(SdkError.ErrorCode.UNKNOWN_ERROR, "error").build());
 
-        // When
-        String result = response.getOrElse("default");
+        AssetApiResponse<Integer> mapped = success.map(String::length);
+        AssetApiResponse<Integer> flatMapped = success.flatMap(v -> AssetApiResponse.success(v.length() * 2));
+        AssetApiResponse<Integer> mappedFailure = failure.map(String::length);
+        AssetApiResponse<Integer> flatMappedFailure = failure.flatMap(v -> AssetApiResponse.success(1));
 
-        // Then
-        assertThat(result).isEqualTo("default");
-    }
-
-    @Test
-    void map_shouldTransformBodyOnSuccess() {
-        // Given
-        AssetApiResponse<String> response = AssetApiResponse.success("hello");
-
-        // When
-        AssetApiResponse<Integer> mapped = response.map(String::length);
-
-        // Then
-        assertThat(mapped.isSuccess()).isTrue();
         assertThat(mapped.getBody()).isEqualTo(5);
+        assertThat(flatMapped.getBody()).isEqualTo(10);
+        assertThat(mappedFailure.isFailure()).isTrue();
+        assertThat(flatMappedFailure.isFailure()).isTrue();
     }
 
     @Test
-    void map_shouldPreserveErrorOnFailure() {
-        // Given
-        AssetApiResponse<String> response = AssetApiResponse.fail(SdkError.builder(SdkError.ErrorCode.UNKNOWN_ERROR, "error").build());
-
-        // When
-        AssetApiResponse<Integer> mapped = response.map(String::length);
-
-        // Then
-        assertThat(mapped.isSuccess()).isFalse();
-        assertThat(mapped.getErrorMessage()).isEqualTo("error");
-    }
-
-    @Test
-    void ifSuccess_shouldExecuteActionOnSuccess() {
-        // Given
-        AssetApiResponse<String> response = AssetApiResponse.success("value");
+    void ifSuccess_and_ifFailure_shouldInvokeCallbacks() {
         AtomicReference<String> captured = new AtomicReference<>();
+        AtomicBoolean failed = new AtomicBoolean(false);
 
-        // When
-        response.ifSuccess(captured::set);
+        AssetApiResponse<String> success = AssetApiResponse.success("value");
+        AssetApiResponse<String> failure = AssetApiResponse.fail(SdkError.apiError("error", 500));
 
-        // Then
+        success.ifSuccess(captured::set);
+        failure.ifFailure(e -> failed.set(true));
+
         assertThat(captured.get()).isEqualTo("value");
+        assertThat(failed.get()).isTrue();
     }
 
     @Test
-    void ifFailure_shouldExecuteActionOnFailure() {
-        // Given
-        SdkError error = SdkError.apiError("error", 500);
-        AssetApiResponse<String> response = AssetApiResponse.fail(error);
+    void ifFailure_shouldIgnoreNullError() {
+        AssetApiResponse<String> response = AssetApiResponse.success("ok");
         AtomicBoolean called = new AtomicBoolean(false);
 
-        // When
         response.ifFailure(e -> called.set(true));
 
-        // Then
-        assertThat(called.get()).isTrue();
+        assertThat(called.get()).isFalse();
     }
-
 }

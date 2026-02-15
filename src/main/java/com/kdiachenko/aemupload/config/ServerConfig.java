@@ -23,7 +23,7 @@ public class ServerConfig implements ApiServerConfiguration {
 
     String schema;
     String host;
-    Integer port;
+    String port;
 
     private ServerConfig(ServerConfigBuilder builder) {
         this.schema = builder.schema;
@@ -48,22 +48,13 @@ public class ServerConfig implements ApiServerConfiguration {
                     .host(uri.getHost());
 
             if (uri.getPort() > 0) {
-                builder.port(uri.getPort());
+                builder.port(String.valueOf(uri.getPort()));
             }
 
             return builder.build();
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid server URL: " + serverUrl, e);
         }
-    }
-
-    /**
-     * Returns the port as an integer, or null if not set.
-     *
-     * @return the port number or null
-     */
-    public Integer getPortAsInt() {
-        return port;
     }
 
     @Override

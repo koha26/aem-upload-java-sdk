@@ -27,7 +27,7 @@ public class ApiAccessTokenConfigurationStub implements ApiAccessTokenConfigurat
 
     public ApiAccessTokenConfigurationStub(ApiAccessTokenConfiguration config) {
         this.localDevelopmentAccessToken = config.getLocalDevelopmentAccessToken();
-        this.imsEndpoint = config.getLocalDevelopmentAccessToken();
+        this.imsEndpoint = config.getImsEndpoint();
         this.metaScopes = config.getMetaScopes();
         this.clientId = config.getClientId();
         this.clientSecret = config.getClientSecret();

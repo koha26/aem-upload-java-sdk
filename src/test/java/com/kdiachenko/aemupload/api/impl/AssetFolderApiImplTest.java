@@ -7,6 +7,7 @@ import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.http.entity.HttpContexts;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.model.AssetElement;
+import com.kdiachenko.aemupload.exception.SdkError;
 import com.kdiachenko.aemupload.utils.PathNormalizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -155,7 +156,10 @@ class AssetFolderApiImplTest {
 
         // Assert
         assertThat(response.isSuccess()).isFalse();
-        assertThat(response.getErrorMessage()).isEqualTo("Error message");
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("Error message");
     }
 
     @Test
@@ -172,6 +176,33 @@ class AssetFolderApiImplTest {
 
         // Assert
         assertThat(response.isSuccess()).isFalse();
-        assertThat(response.getErrorMessage()).isEqualTo("Error message");
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("Error message");
+    }
+
+    @Test
+    @DisplayName("getFolder should validate blank folder")
+    void getFolder_shouldValidateBlankFolder() {
+        AssetApiResponse<AssetElement> response = assetFolderApi.getFolder("  ");
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getHttpStatus)
+                .isEqualTo(400);
+    }
+
+    @Test
+    @DisplayName("createFolder should validate null properties")
+    void createFolder_shouldValidateNullProperties() {
+        AssetApiResponse<Void> response = assetFolderApi.createFolder(FOLDER_PATH, null);
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("properties must not be null");
     }
 }

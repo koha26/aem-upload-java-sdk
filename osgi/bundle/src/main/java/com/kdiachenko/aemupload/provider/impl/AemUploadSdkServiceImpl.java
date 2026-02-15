@@ -19,6 +19,7 @@ import org.osgi.service.metatype.annotations.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -79,12 +80,19 @@ public class AemUploadSdkServiceImpl implements AemUploadSdkService, SdkApiProvi
 
     private void closeExistingSdk() {
         if (sdk != null) {
-            try {
-                sdk.close();
-                sdk = null;
-            } catch (IOException e) {
-                log.warn("Error closing AEM Upload SDK", e);
-            }
+            closeQuietly(sdk);
+            sdk = null;
+        }
+    }
+
+    void closeQuietly(Closeable closeable) {
+        if (closeable == null) {
+            return;
+        }
+        try {
+            closeable.close();
+        } catch (IOException e) {
+            log.warn("Error closing AEM Upload SDK", e);
         }
     }
 

@@ -1,8 +1,8 @@
 package com.kdiachenko.aemupload.api.builder;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,18 +40,22 @@ class BaseApiBuilderTest {
             return apiServerConfiguration;
         }
 
-        ObjectMapper getObjectMapper() {
-            return objectMapper;
-        }
-
         ApiHttpClientResponseHandlerFactory getResponseHandlerFactory() {
             return httpClientResponseHandlerFactory;
+        }
+
+        HttpClientObjectMapper getHttpClientObjectMapper() {
+            return httpClientObjectMapper;
         }
 
         // Expose protected method for testing
         @Override
         protected ApiHttpClient buildApiHttpClient() {
             return super.buildApiHttpClient();
+        }
+
+        void validateBuilder() {
+            validate();
         }
     }
 
@@ -64,10 +69,10 @@ class BaseApiBuilderTest {
     private ApiHttpClient apiHttpClient;
 
     @Mock
-    private ObjectMapper objectMapper;
+    private ApiHttpClientResponseHandlerFactory responseHandlerFactory;
 
     @Mock
-    private ApiHttpClientResponseHandlerFactory responseHandlerFactory;
+    private HttpClientObjectMapper httpClientObjectMapper;
 
     private TestApiBuilder builder;
 
@@ -126,17 +131,17 @@ class BaseApiBuilderTest {
         assertThat(builder.getApiServerConfiguration()).isEqualTo(newConfig);
     }
 
-/*    @Test
-    void testSetObjectMapper() {
-        TestApiBuilder result = builder.setObjectMapper(objectMapper);
+    @Test
+    void testWithHttpClientObjectMapper() {
+        TestApiBuilder result = builder.withApiHttpClientObjectMapper(httpClientObjectMapper);
 
         assertThat(result).isSameAs(builder);
-        assertThat(builder.getObjectMapper()).isEqualTo(objectMapper);
-    }*/
+        assertThat(builder.getHttpClientObjectMapper()).isEqualTo(httpClientObjectMapper);
+    }
 
     @Test
-    void testSetResponseHandlerFactory() {
-        TestApiBuilder result = builder.setResponseHandlerFactory(responseHandlerFactory);
+    void testWithResponseHandlerFactory() {
+        TestApiBuilder result = builder.withApiHttpClientResponseHandlerFactory(responseHandlerFactory);
 
         assertThat(result).isSameAs(builder);
         assertThat(builder.getResponseHandlerFactory()).isEqualTo(responseHandlerFactory);
@@ -165,5 +170,26 @@ class BaseApiBuilderTest {
         ApiHttpClient result = builder.buildApiHttpClient();
 
         assertThat(result).isNotNull();
+    }
+
+    @Test
+    void validate_shouldFailWhenNoHttpClientsProvided() {
+        assertThatThrownBy(() -> builder.validateBuilder())
+                .isInstanceOf(com.kdiachenko.aemupload.exception.SdkException.class)
+                .hasMessageContaining("Either ApiHttpClient or HttpClient must be provided");
+    }
+
+    @Test
+    void validate_shouldPassWhenHttpClientProvided() {
+        builder.withHttpClient(httpClient);
+
+        builder.validateBuilder();
+    }
+
+    @Test
+    void validate_shouldPassWhenApiHttpClientProvided() {
+        builder.withApiHttpClient(apiHttpClient);
+
+        builder.validateBuilder();
     }
 }

@@ -82,6 +82,19 @@ class ApiHttpClientResponseHandlerTest {
     }
 
     @Test
+    void handleResponse_shouldHandleErrorWhenEntityIsNull() throws IOException {
+        BasicClassicHttpResponse response = new BasicClassicHttpResponse(500, "Server Error");
+
+        ApiHttpResponse<TestResponse> result = handler.handleResponse(response);
+
+        assertThat(result.getStatus()).isEqualTo(500);
+        assertThatJson(result.getErrorMessage())
+                .isObject()
+                .containsEntry("apiResponse", "")
+                .containsEntry("reasonPhrase", "Server Error");
+    }
+
+    @Test
     void handleResponse_shouldReturnEmptyResponseIfEntityIsNull() throws IOException {
         BasicClassicHttpResponse response = new BasicClassicHttpResponse(200);
 

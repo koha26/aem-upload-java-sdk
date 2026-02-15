@@ -144,16 +144,6 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         return accessToken.getAccessToken();
     }
 
-    /**
-     * Returns the current date.
-     *
-     * @deprecated Use the injected Clock instead
-     */
-    @Deprecated(forRemoval = true)
-    Date getDate() {
-        return Date.from(clock.now());
-    }
-
     private String getJWTToken() {
         RSAPrivateKey privateKey = getRsaPrivateKey();
         if (privateKey == null) {
@@ -211,7 +201,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
                     .trim();
             byte[] decode = Base64.getDecoder().decode(privateKeyContentNormalized);
             PKCS8EncodedKeySpec keySpecPv = new PKCS8EncodedKeySpec(decode, "RSA");
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            KeyFactory keyFactory = getKeyFactory();
             return (RSAPrivateKey) keyFactory.generatePrivate(keySpecPv);
         } catch (NoSuchAlgorithmException e) {
             log.error("No RSA algorithm", e);
@@ -259,6 +249,13 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         formParams.put("client_secret", apiAccessTokenConfiguration.getClientSecret());
         formParams.put("jwt_token", jwtToken);
         return formParams;
+    }
+
+    /**
+     * Factory method for RSA {@link KeyFactory}. Extracted for testability.
+     */
+    protected KeyFactory getKeyFactory() throws NoSuchAlgorithmException {
+        return KeyFactory.getInstance("RSA");
     }
 
     @Data

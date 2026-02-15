@@ -1,16 +1,20 @@
 package com.kdiachenko.aemupload.api.impl;
 
 import com.kdiachenko.aemupload.config.ApiServerConfiguration;
+import com.kdiachenko.aemupload.exception.SdkError;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.http.entity.HttpContexts;
-import com.kdiachenko.aemupload.utils.impl.FileSplitterImpl;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.options.CompleteBinaryUploadOptions;
 import com.kdiachenko.aemupload.options.CompleteUploadResponse;
 import com.kdiachenko.aemupload.options.InitiateBinaryUploadOptions;
 import com.kdiachenko.aemupload.options.InitiateUploadResponse;
+import com.kdiachenko.aemupload.options.UploadBinaryOptions;
+import com.kdiachenko.aemupload.options.UploadBinaryResponse;
+import com.kdiachenko.aemupload.utils.FileSplitter;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +31,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -34,10 +39,13 @@ import java.util.Map;
 import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
 import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,7 +55,6 @@ class DirectBinaryUploadApiImplTest {
 
     private static final String HOST_URL = "https://example.com";
     private static final String DAM_ASSET_FOLDER = "/content/dam/test";
-    private static final String NORMALIZED_DAM_ASSET_FOLDER = "/api/assets/test";
     private static final String FILE_NAME = "test.jpg";
     private static final long FILE_SIZE = 1024L;
     private static final String CONTENT_TYPE_VALUE = "image/jpeg";
@@ -82,51 +89,32 @@ class DirectBinaryUploadApiImplTest {
     private ArgumentCaptor<ApiHttpEntity<?>> httpEntityCaptor;
 
     private DirectBinaryUploadApiImpl directBinaryUploadApi;
-    private Path binaryFile;
-    private List<URI> uploadURIs;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() {
         when(apiServerConfiguration.getHostUrl()).thenReturn(HOST_URL);
-
-        // Create a test binary file
-        binaryFile = tempDir.resolve("test.jpg");
-        Files.write(binaryFile, "test binary data".getBytes());
-
-        // Setup mock URIs
-        uploadURIs = Arrays.asList(
-                URI.create("https://example.com/part1"),
-                URI.create("https://example.com/part2")
-        );
-
-        // Setup default behavior for mock responses
         when(initiateUploadResponse.isSuccess()).thenReturn(true);
         when(initiateUploadResponse.getBody()).thenReturn(initiateUploadResponseBody);
-        when(initiateUploadResponse.getErrorMessage()).thenReturn(null);
-        //when(initiateUploadResponseBody.getUploadURIs()).thenReturn(uploadURIs);
-        when(initiateUploadResponseBody.getCompleteURI()).thenReturn(COMPLETE_URI);
-        //when(initiateUploadResponseBody.getUploadToken()).thenReturn(UPLOAD_TOKEN);
-
         when(uploadPartResponse.isSuccess()).thenReturn(true);
-        when(uploadPartResponse.getBody()).thenReturn(null);
-        when(uploadPartResponse.getErrorMessage()).thenReturn(null);
-
         when(completeUploadResponse.isSuccess()).thenReturn(true);
         when(completeUploadResponse.getBody()).thenReturn(completeUploadResponseBody);
-        when(completeUploadResponse.getErrorMessage()).thenReturn(null);
 
-        // Setup default behavior for apiHttpClient
-        doReturn(initiateUploadResponse).when(apiHttpClient).post(anyString(), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(InitiateUploadResponse.class));
-        doReturn(uploadPartResponse).when(apiHttpClient).put(anyString(), any(ApiHttpEntity.class), eq(Void.class));
-        doReturn(completeUploadResponse).when(apiHttpClient).post(anyString(), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(CompleteUploadResponse.class));
+        doReturn(initiateUploadResponse)
+                .when(apiHttpClient)
+                .post(anyString(), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(InitiateUploadResponse.class));
+        doReturn(uploadPartResponse)
+                .when(apiHttpClient)
+                .put(anyString(), any(ApiHttpEntity.class), eq(Void.class));
+        doReturn(completeUploadResponse)
+                .when(apiHttpClient)
+                .post(anyString(), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(CompleteUploadResponse.class));
 
-        directBinaryUploadApi = new DirectBinaryUploadApiImpl(apiHttpClient, apiServerConfiguration, new FileSplitterImpl());
+        directBinaryUploadApi = new DirectBinaryUploadApiImpl(apiHttpClient, apiServerConfiguration, fileSplitter(List.of()));
     }
 
     @Test
     @DisplayName("initiateUpload should make POST request and return mapped response")
     void initiateUpload_shouldMakePostRequestAndReturnMappedResponse() {
-        // Arrange
         InitiateBinaryUploadOptions options = InitiateBinaryUploadOptions.builder()
                 .damAssetFolder(DAM_ASSET_FOLDER)
                 .fileName(FILE_NAME)
@@ -135,10 +123,8 @@ class DirectBinaryUploadApiImplTest {
 
         String expectedUrl = HOST_URL + DAM_ASSET_FOLDER + ".initiateUpload.json";
 
-        // Act
         AssetApiResponse<InitiateUploadResponse> response = directBinaryUploadApi.initiateUpload(options);
 
-        // Assert
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getBody()).isEqualTo(initiateUploadResponseBody);
         verify(apiHttpClient).post(eq(expectedUrl), httpEntityCaptor.capture(), eq(HttpContexts.AUTHORIZED), eq(InitiateUploadResponse.class));
@@ -151,59 +137,52 @@ class DirectBinaryUploadApiImplTest {
         assertThat(headers).containsEntry(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString());
     }
 
-    /*@Test
-    @DisplayName("uploadBinary should split file, upload parts and return success response")
-    void uploadBinary_shouldSplitFileUploadPartsAndReturnSuccessResponse() throws IOException {
-        // Arrange
-        UploadBinaryOptions options = UploadBinaryOptions.builder()
-                .binary(binaryFile)
-                .contentType(CONTENT_TYPE_VALUE)
-                .uploadURIs(uploadURIs)
-                .maxPartSize(512L)
+    @Test
+    @DisplayName("initiateUpload should handle transport error")
+    void initiateUpload_shouldHandleTransportError() {
+        InitiateBinaryUploadOptions options = InitiateBinaryUploadOptions.builder()
+                .damAssetFolder(DAM_ASSET_FOLDER)
+                .fileName(FILE_NAME)
+                .fileSize(FILE_SIZE)
                 .build();
 
-        Path part1 = tempDir.resolve("part1");
-        Path part2 = tempDir.resolve("part2");
-        Files.write(part1, "part1 data".getBytes());
-        Files.write(part2, "part2 data".getBytes());
-        List<Path> parts = Arrays.asList(part1, part2);
+        doThrow(new RuntimeException("boom"))
+                .when(apiHttpClient)
+                .post(anyString(), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(InitiateUploadResponse.class));
 
-        try (MockedStatic<FileSplitUtil> fileSplitUtilMock = mockStatic(FileSplitUtil.class);
-             MockedStatic<Files> filesMock = mockStatic(Files.class)) {
+        AssetApiResponse<InitiateUploadResponse> response = directBinaryUploadApi.initiateUpload(options);
 
-            fileSplitUtilMock.when(() -> FileSplitUtil.splitFile(eq(binaryFile), anyLong()))
-                    .thenReturn(parts);
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("Failed to initiate upload");
+    }
 
-            // Mock Files.newInputStream
-            InputStream mockInputStream1 = Files.newInputStream(part1);
-            InputStream mockInputStream2 = Files.newInputStream(part2);
-            filesMock.when(() -> Files.newInputStream(part1)).thenReturn(mockInputStream1);
-            filesMock.when(() -> Files.newInputStream(part2)).thenReturn(mockInputStream2);
+    @Test
+    @DisplayName("initiateUpload should handle API error response")
+    void initiateUpload_shouldHandleApiErrorResponse() {
+        InitiateBinaryUploadOptions options = InitiateBinaryUploadOptions.builder()
+                .damAssetFolder(DAM_ASSET_FOLDER)
+                .fileName(FILE_NAME)
+                .fileSize(FILE_SIZE)
+                .build();
 
-            // Mock Files.delete
-            filesMock.when(() -> Files.delete(any(Path.class))).thenReturn(true);
+        when(initiateUploadResponse.isSuccess()).thenReturn(false);
+        when(initiateUploadResponse.getErrorMessage()).thenReturn("Error message");
 
-            // Act
-            AssetApiResponse<UploadBinaryResponse> response = directBinaryUploadApi.uploadBinary(options);
+        AssetApiResponse<InitiateUploadResponse> response = directBinaryUploadApi.initiateUpload(options);
 
-            // Assert
-            assertThat(response.isSuccess()).isTrue();
-            //assertThat(response.getBody().getPartsCount()).isEqualTo(2);
-
-            // Verify put was called for each part
-            verify(apiHttpClient).put(eq("https://example.com/part1"), any(ApiHttpEntity.class), eq(Void.class));
-            verify(apiHttpClient).put(eq("https://example.com/part2"), any(ApiHttpEntity.class), eq(Void.class));
-
-            // Verify Files.delete was called for each part
-            filesMock.verify(() -> Files.delete(part1));
-            filesMock.verify(() -> Files.delete(part2));
-        }
-    }*/
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("Error message");
+    }
 
     @Test
     @DisplayName("completeUpload should make POST request and return mapped response")
     void completeUpload_shouldMakePostRequestAndReturnMappedResponse() {
-        // Arrange
         CompleteBinaryUploadOptions options = CompleteBinaryUploadOptions.builder()
                 .completeUri(COMPLETE_URI)
                 .fileName(FILE_NAME)
@@ -218,10 +197,8 @@ class DirectBinaryUploadApiImplTest {
 
         String expectedUrl = HOST_URL + COMPLETE_URI;
 
-        // Act
         AssetApiResponse<CompleteUploadResponse> response = directBinaryUploadApi.completeUpload(options);
 
-        // Assert
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getBody()).isEqualTo(completeUploadResponseBody);
         verify(apiHttpClient).post(eq(expectedUrl), httpEntityCaptor.capture(), eq(HttpContexts.AUTHORIZED), eq(CompleteUploadResponse.class));
@@ -241,75 +218,8 @@ class DirectBinaryUploadApiImplTest {
     }
 
     @Test
-    @DisplayName("initiateUpload should handle error response")
-    void initiateUpload_shouldHandleErrorResponse() {
-        // Arrange
-        InitiateBinaryUploadOptions options = InitiateBinaryUploadOptions.builder()
-                .damAssetFolder(DAM_ASSET_FOLDER)
-                .fileName(FILE_NAME)
-                .fileSize(FILE_SIZE)
-                .build();
-
-        when(initiateUploadResponse.isSuccess()).thenReturn(false);
-        when(initiateUploadResponse.getErrorMessage()).thenReturn("Error message");
-
-        // Act
-        AssetApiResponse<InitiateUploadResponse> response = directBinaryUploadApi.initiateUpload(options);
-
-        // Assert
-        assertThat(response.isSuccess()).isFalse();
-        assertThat(response.getErrorMessage()).isEqualTo("Error message");
-    }
-
-   /* @Test
-    @DisplayName("uploadBinary should handle error when upload part fails")
-    void uploadBinary_shouldHandleErrorWhenUploadPartFails() throws IOException {
-        // Arrange
-        UploadBinaryOptions options = UploadBinaryOptions.builder()
-                .binary(binaryFile)
-                .contentType(CONTENT_TYPE_VALUE)
-                .uploadURIs(uploadURIs)
-                .maxPartSize(512L)
-                .build();
-
-        Path part1 = tempDir.resolve("part1");
-        Path part2 = tempDir.resolve("part2");
-        Files.write(part1, "part1 data".getBytes());
-        Files.write(part2, "part2 data".getBytes());
-        List<Path> parts = Arrays.asList(part1, part2);
-
-        when(uploadPartResponse.isSuccess()).thenReturn(false);
-        when(uploadPartResponse.getErrorMessage()).thenReturn("Upload failed");
-
-        try (MockedStatic<FileSplitUtil> fileSplitUtilMock = mockStatic(FileSplitUtil.class);
-             MockedStatic<Files> filesMock = mockStatic(Files.class)) {
-
-            fileSplitUtilMock.when(() -> FileSplitUtil.splitFile(eq(binaryFile), anyLong()))
-                    .thenReturn(parts);
-
-            // Mock Files.newInputStream
-            InputStream mockInputStream1 = Files.newInputStream(part1);
-            filesMock.when(() -> Files.newInputStream(part1)).thenReturn(mockInputStream1);
-
-            // Mock Files.delete
-            filesMock.when(() -> Files.delete(any(Path.class))).thenReturn(true);
-
-            // Act
-            AssetApiResponse<UploadBinaryResponse> response = directBinaryUploadApi.uploadBinary(options);
-
-            // Assert
-            assertThat(response.isSuccess()).isFalse();
-            assertThat(response.getErrorMessage()).isEqualTo("Failed to upload binary");
-
-            // Verify delete was called for the first part
-            filesMock.verify(() -> Files.delete(part1));
-        }
-    }*/
-
-    @Test
     @DisplayName("completeUpload should handle error response")
     void completeUpload_shouldHandleErrorResponse() {
-        // Arrange
         CompleteBinaryUploadOptions options = CompleteBinaryUploadOptions.builder()
                 .completeUri(COMPLETE_URI)
                 .fileName(FILE_NAME)
@@ -320,11 +230,134 @@ class DirectBinaryUploadApiImplTest {
         when(completeUploadResponse.isSuccess()).thenReturn(false);
         when(completeUploadResponse.getErrorMessage()).thenReturn("Error message");
 
-        // Act
         AssetApiResponse<CompleteUploadResponse> response = directBinaryUploadApi.completeUpload(options);
 
-        // Assert
         assertThat(response.isSuccess()).isFalse();
-        assertThat(response.getErrorMessage()).isEqualTo("Error message");
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("Error message");
+    }
+
+    @Test
+    @DisplayName("uploadBinary should split file, upload parts, and delete temp parts")
+    void uploadBinary_shouldSplitUploadAndCleanup() throws IOException {
+        Path part1 = createTempPart("part1", "part1 data");
+        Path part2 = createTempPart("part2", "part2 data");
+        List<Path> parts = List.of(part1, part2);
+        List<URI> uploadURIs = Arrays.asList(
+                URI.create("https://example.com/part1"),
+                URI.create("https://example.com/part2")
+        );
+
+        directBinaryUploadApi = new DirectBinaryUploadApiImpl(apiHttpClient, apiServerConfiguration, fileSplitter(parts));
+
+        UploadBinaryOptions options = UploadBinaryOptions.builder()
+                .binary(tempDir.resolve("test.bin"))
+                .contentType(CONTENT_TYPE_VALUE)
+                .uploadURIs(uploadURIs)
+                .maxPartSize(512L)
+                .build();
+
+        AssetApiResponse<UploadBinaryResponse> response = directBinaryUploadApi.uploadBinary(options);
+
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.getBody().getChunks()).isEqualTo(2);
+        verify(apiHttpClient).put(eq("https://example.com/part1"), any(ApiHttpEntity.class), eq(Void.class));
+        verify(apiHttpClient).put(eq("https://example.com/part2"), any(ApiHttpEntity.class), eq(Void.class));
+        assertThat(Files.exists(part1)).isFalse();
+        assertThat(Files.exists(part2)).isFalse();
+    }
+
+    @Test
+    @DisplayName("uploadBinary should fail when uploadURIs size mismatches parts")
+    void uploadBinary_shouldValidateUrisCount() throws IOException {
+        Path part1 = createTempPart("part1", "part1 data");
+        Path part2 = createTempPart("part2", "part2 data");
+        List<Path> parts = List.of(part1, part2);
+        List<URI> uploadURIs = List.of(URI.create("https://example.com/part1"));
+
+        directBinaryUploadApi = new DirectBinaryUploadApiImpl(apiHttpClient, apiServerConfiguration, fileSplitter(parts));
+
+        UploadBinaryOptions options = UploadBinaryOptions.builder()
+                .binary(tempDir.resolve("test.bin"))
+                .contentType(CONTENT_TYPE_VALUE)
+                .uploadURIs(uploadURIs)
+                .maxPartSize(512L)
+                .build();
+
+        AssetApiResponse<UploadBinaryResponse> response = directBinaryUploadApi.uploadBinary(options);
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .asString()
+                .contains("uploadURIs size");
+        verify(apiHttpClient, never()).put(anyString(), any(ApiHttpEntity.class), eq(Void.class));
+        assertThat(Files.exists(part1)).isFalse();
+        assertThat(Files.exists(part2)).isFalse();
+    }
+
+    @Test
+    @DisplayName("uploadBinary should fail when upload part fails")
+    void uploadBinary_shouldHandlePartUploadFailure() throws IOException {
+        Path part1 = createTempPart("part1", "part1 data");
+        List<Path> parts = List.of(part1);
+        List<URI> uploadURIs = List.of(URI.create("https://example.com/part1"));
+
+        when(uploadPartResponse.isSuccess()).thenReturn(false);
+        when(uploadPartResponse.getStatus()).thenReturn(500);
+        when(uploadPartResponse.getErrorMessage()).thenReturn("Upload failed");
+
+        directBinaryUploadApi = new DirectBinaryUploadApiImpl(apiHttpClient, apiServerConfiguration, fileSplitter(parts));
+
+        UploadBinaryOptions options = UploadBinaryOptions.builder()
+                .binary(tempDir.resolve("test.bin"))
+                .contentType(CONTENT_TYPE_VALUE)
+                .uploadURIs(uploadURIs)
+                .maxPartSize(512L)
+                .build();
+
+        AssetApiResponse<UploadBinaryResponse> response = directBinaryUploadApi.uploadBinary(options);
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .satisfies(error -> {
+                    assertThat(error.getMessage()).isEqualTo("Failed to upload binary part");
+                    assertThat(error.getHttpStatus()).isEqualTo(500);
+                    assertThat(error.getRawResponse()).contains("Upload failed");
+                });
+        assertThat(Files.exists(part1)).isFalse();
+    }
+
+    @Test
+    @DisplayName("uploadBinary should handle exceptions from file splitter")
+    void uploadBinary_shouldHandleSplitterException() {
+        directBinaryUploadApi = new DirectBinaryUploadApiImpl(apiHttpClient, apiServerConfiguration, fileSplitterException());
+
+        Assertions.assertThrows(IllegalStateException.class, () -> UploadBinaryOptions.builder()
+                .binary(tempDir.resolve("test.bin"))
+                .contentType(CONTENT_TYPE_VALUE)
+                .uploadURIs(List.of())
+                .maxPartSize(512L)
+                .build());
+    }
+
+    private FileSplitter fileSplitter(List<Path> parts) {
+        return (binary, maxPartSize) -> parts;
+    }
+
+    private FileSplitter fileSplitterException() {
+        return (binary, maxPartSize) -> {
+            throw new IllegalStateException("split failed");
+        };
+    }
+
+    private Path createTempPart(String name, String content) throws IOException {
+        Path part = tempDir.resolve(name);
+        Files.write(part, content.getBytes(StandardCharsets.UTF_8));
+        return part;
     }
 }

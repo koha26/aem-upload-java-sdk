@@ -7,6 +7,7 @@ import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.http.entity.HttpContexts;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.model.DamAsset;
+import com.kdiachenko.aemupload.exception.SdkError;
 import com.kdiachenko.aemupload.utils.PathNormalizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,7 +36,6 @@ class AssetMetadataApiImplTest {
     private static final String HOST_URL = "https://example.com";
     private static final String ASSET_PATH = "/content/dam/test/asset.jpg";
     private static final String NORMALIZED_ASSET_PATH = "/api/assets/test/asset.jpg";
-    private static final String METADATA_URL = HOST_URL + ASSET_PATH + "/jcr:content/metadata.json";
 
     @Mock
     private ApiHttpClient apiHttpClient;
@@ -86,7 +86,7 @@ class AssetMetadataApiImplTest {
     @DisplayName("getAssetMetadata should make GET request and return mapped response")
     void getAssetMetadata_shouldMakeGetRequestAndReturnMappedResponse() {
         // Arrange
-        String metadataUrl = HOST_URL + ASSET_PATH + "/jcr:content/metadata.json";
+        String metadataUrl = HOST_URL + NORMALIZED_ASSET_PATH;
         when(apiHttpClient.get(eq(metadataUrl), eq(HttpContexts.AUTHORIZED), eq(DamAsset.class)))
                 .thenReturn(damAssetResponse);
 
@@ -142,7 +142,7 @@ class AssetMetadataApiImplTest {
     @DisplayName("getAssetMetadata should handle error response")
     void getAssetMetadata_shouldHandleErrorResponse() {
         // Arrange
-        String metadataUrl = HOST_URL + ASSET_PATH + "/jcr:content/metadata.json";
+        String metadataUrl = HOST_URL + NORMALIZED_ASSET_PATH;
         when(apiHttpClient.get(eq(metadataUrl), eq(HttpContexts.AUTHORIZED), eq(DamAsset.class)))
                 .thenReturn(damAssetResponse);
         when(damAssetResponse.isSuccess()).thenReturn(false);
@@ -153,7 +153,10 @@ class AssetMetadataApiImplTest {
 
         // Assert
         assertThat(response.isSuccess()).isFalse();
-        assertThat(response.getErrorMessage()).isEqualTo("Error message");
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("Error message");
     }
 
     @Test
@@ -171,7 +174,10 @@ class AssetMetadataApiImplTest {
 
         // Assert
         assertThat(response.isSuccess()).isFalse();
-        assertThat(response.getErrorMessage()).isEqualTo("Error message");
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("Error message");
     }
 
     @Test
@@ -188,6 +194,33 @@ class AssetMetadataApiImplTest {
 
         // Assert
         assertThat(response.isSuccess()).isFalse();
-        assertThat(response.getErrorMessage()).isEqualTo("Error message");
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("Error message");
+    }
+
+    @Test
+    @DisplayName("getAssetMetadata should validate blank assetPath")
+    void getAssetMetadata_shouldValidateBlankAssetPath() {
+        AssetApiResponse<DamAsset> response = assetMetadataApi.getAssetMetadata("  ");
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getHttpStatus)
+                .isEqualTo(400);
+    }
+
+    @Test
+    @DisplayName("updateAssetMetadata should validate null metadata")
+    void updateAssetMetadata_shouldValidateNullMetadata() {
+        AssetApiResponse<Void> response = assetMetadataApi.updateAssetMetadata(ASSET_PATH, null);
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("metadata must not be null");
     }
 }

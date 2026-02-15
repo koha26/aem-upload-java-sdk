@@ -7,7 +7,15 @@ import com.kdiachenko.aemupload.config.AccessTokenAuthConfig;
 import com.kdiachenko.aemupload.config.BasicAuthConfig;
 import com.kdiachenko.aemupload.config.ServerConfig;
 import com.kdiachenko.aemupload.config.ServiceCredentialsAuthConfig;
+import com.kdiachenko.aemupload.exception.SdkException;
+import com.kdiachenko.aemupload.http.HttpClient5BuilderConfigurator;
+import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
+import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 
 import java.io.IOException;
 import java.util.List;
@@ -67,7 +75,7 @@ class AemUploadSdkTest {
         assertThatThrownBy(() -> AemUploadSdk.builder()
                 .withAccessToken("test-token")
                 .build())
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(SdkException.class)
                 .hasMessageContaining("serverUrl");
     }
 
@@ -76,8 +84,19 @@ class AemUploadSdkTest {
         assertThatThrownBy(() -> AemUploadSdk.builder()
                 .serverUrl("https://example.com")
                 .build())
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(SdkException.class)
                 .hasMessageContaining("authentication");
+    }
+
+    @Test
+    void builder_shouldFailWithNullAuthorizationProviderFactory() {
+        assertThatThrownBy(() -> AemUploadSdk.builder()
+                .serverUrl("https://example.com")
+                .withAccessToken("token")
+                .authorizationProviderFactory(null)
+                .build())
+                .isInstanceOf(SdkException.class)
+                .hasMessageContaining("authorizationProviderFactory");
     }
 
     @Test
@@ -108,7 +127,7 @@ class AemUploadSdkTest {
 
         assertThat(config.getSchema()).isEqualTo("https");
         assertThat(config.getHost()).isEqualTo("author.adobeaemcloud.com");
-        assertThat(config.getPortAsInt()).isEqualTo(443);
+        assertThat(config.getPort()).isEqualTo("443");
         assertThat(config.getHostUrl()).isEqualTo("https://author.adobeaemcloud.com:443");
     }
 
@@ -118,7 +137,7 @@ class AemUploadSdkTest {
 
         assertThat(config.getSchema()).isEqualTo("https");
         assertThat(config.getHost()).isEqualTo("example.com");
-        assertThat(config.getPortAsInt()).isNull();
+        assertThat(config.getPort()).isNull();
         assertThat(config.getHostUrl()).isEqualTo("https://example.com");
     }
 
@@ -140,7 +159,7 @@ class AemUploadSdkTest {
         assertThat(config.getAuthType()).isEqualTo("BasicAuth");
         // Verify password is not exposed in toString
         assertThat(config.toString()).doesNotContain("secret123");
-        assertThat(config.toString()).contains("[REDACTED]");
+        assertThat(config.toString()).contains("[****]");
     }
 
     @Test
@@ -151,8 +170,86 @@ class AemUploadSdkTest {
                 .technicalAccountId("tech")
                 // missing orgId
                 .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
                 .build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("orgId");
+    }
+
+    @Test
+    void serviceCredentialsAuthConfig_shouldValidateMetaScopesAndDefaultTokenLifetime() {
+        ServiceCredentialsAuthConfig config = ServiceCredentialsAuthConfig.builder()
+                .clientId("id")
+                .clientSecret("secret")
+                .technicalAccountId("tech")
+                .orgId("org")
+                .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
+                .build();
+
+        assertThat(config.getTokenLifeTimeInSec()).isGreaterThan(0);
+    }
+
+    @Test
+    void builder_shouldAllowCustomHttpClientAndNotCloseIt() throws IOException {
+        CloseableHttpClient httpClient = Mockito.mock(CloseableHttpClient.class);
+        AemUploadSdk sdk = AemUploadSdk.builder()
+                .serverUrl("https://example.com")
+                .withAccessToken("token")
+                .httpClient(httpClient)
+                .build();
+
+        sdk.close();
+
+        Mockito.verify(httpClient, Mockito.never()).close();
+    }
+
+    @Test
+    void builder_shouldUseHttpClientBuilderFactoryAndConfigurator() throws IOException {
+        CloseableHttpClient httpClient = Mockito.mock(CloseableHttpClient.class);
+
+        HttpClient5BuilderFactory factory = () -> new HttpClientBuilder() {
+            @Override
+            public CloseableHttpClient build() {
+                return httpClient;
+            }
+        };
+        final boolean[] configured = {false};
+        HttpClient5BuilderConfigurator configurator = new HttpClient5BuilderConfigurator() {
+            @Override
+            public <T extends HttpClientBuilder> T configure(T clientBuilder) {
+                configured[0] = true;
+                return clientBuilder;
+            }
+        };
+
+        AemUploadSdk sdk = AemUploadSdk.builder()
+                .serverUrl("https://example.com")
+                .withAccessToken("token")
+                .httpClientBuilderFactory(factory)
+                .httpClientBuilderConfigurator(configurator)
+                .build();
+
+        assertThat(configured[0]).isTrue();
+        sdk.close();
+        Mockito.verify(httpClient, Mockito.never()).close();
+    }
+
+    @Test
+    void builder_shouldAcceptCustomSerializerAndResponseHandlerFactory() throws IOException {
+        CloseableHttpClient httpClient = Mockito.mock(CloseableHttpClient.class);
+        HttpClientObjectMapper mapper = Mockito.mock(HttpClientObjectMapper.class);
+        ApiHttpClientResponseHandlerFactory factory = Mockito.mock(ApiHttpClientResponseHandlerFactory.class);
+
+        try (AemUploadSdk sdk = AemUploadSdk.builder()
+                .serverUrl("https://example.com")
+                .withAccessToken("token")
+                .httpClient(httpClient)
+                .withHttpClientSerializer(mapper)
+                .withHttpClientResponseHandlerFactory(factory)
+                .build()) {
+
+            assertThat(sdk).isNotNull();
+        }
     }
 }

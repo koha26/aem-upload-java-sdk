@@ -1,35 +1,37 @@
 package com.kdiachenko.aemupload;
 
 import com.kdiachenko.aemupload.api.AssetFolderApi;
-import com.kdiachenko.aemupload.api.AssetMetadataApi;
-import com.kdiachenko.aemupload.api.DirectBinaryUploadApi;
 import com.kdiachenko.aemupload.api.AssetFolderApiBuilder;
+import com.kdiachenko.aemupload.api.AssetMetadataApi;
 import com.kdiachenko.aemupload.api.AssetMetadataApiBuilder;
+import com.kdiachenko.aemupload.api.DirectBinaryUploadApi;
 import com.kdiachenko.aemupload.api.DirectBinaryUploadApiBuilder;
-import com.kdiachenko.aemupload.auth.ApiAccessTokenProvider;
+import com.kdiachenko.aemupload.auth.ApiAuthorizationProvider;
+import com.kdiachenko.aemupload.auth.AuthorizationProviderFactory;
 import com.kdiachenko.aemupload.auth.impl.ApiAuthorizationInterceptorImpl;
-import com.kdiachenko.aemupload.auth.impl.ServiceCredentialsApiAccessTokenProvider;
+import com.kdiachenko.aemupload.auth.impl.DefaultAuthorizationProviderFactory;
 import com.kdiachenko.aemupload.config.AccessTokenAuthConfig;
 import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.config.AuthConfig;
 import com.kdiachenko.aemupload.config.BasicAuthConfig;
 import com.kdiachenko.aemupload.config.ServerConfig;
 import com.kdiachenko.aemupload.config.ServiceCredentialsAuthConfig;
-import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
+import com.kdiachenko.aemupload.exception.SdkException;
 import com.kdiachenko.aemupload.http.HttpClient5BuilderConfigurator;
-import com.kdiachenko.aemupload.utils.FileSplitter;
-import com.kdiachenko.aemupload.utils.PathNormalizer;
+import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
+import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
+import com.kdiachenko.aemupload.internal.http.JacksonHttpClientObjectMapper;
 import com.kdiachenko.aemupload.internal.utils.FileSplitterImpl;
 import com.kdiachenko.aemupload.internal.utils.PathNormalizerImpl;
+import com.kdiachenko.aemupload.utils.FileSplitter;
+import com.kdiachenko.aemupload.utils.PathNormalizer;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Objects;
 
 /**
  * Main entry point for the AEM Upload SDK.
@@ -64,11 +66,14 @@ import java.util.Objects;
  * }</pre>
  */
 public final class AemUploadSdk implements Closeable {
+    private static final HttpClientObjectMapper DEFAULT_HTTP_CLIENT_SERIALIZER = new JacksonHttpClientObjectMapper();
 
     private final ApiServerConfiguration serverConfig;
     private final CloseableHttpClient httpClient;
     private final FileSplitter fileSplitter;
     private final PathNormalizer pathNormalizer;
+    private final HttpClientObjectMapper apiHttpClientObjectMapper;
+    private final ApiHttpClientResponseHandlerFactory apiHttpClientResponseHandlerFactory;
     private final boolean ownedHttpClient;
 
     // Lazily initialized API instances
@@ -82,6 +87,8 @@ public final class AemUploadSdk implements Closeable {
         this.fileSplitter = builder.fileSplitter;
         this.pathNormalizer = builder.pathNormalizer;
         this.ownedHttpClient = builder.ownedHttpClient;
+        this.apiHttpClientObjectMapper = builder.apiHttpClientObjectMapper;
+        this.apiHttpClientResponseHandlerFactory = builder.apiHttpClientResponseHandlerFactory;
     }
 
     /**
@@ -104,6 +111,8 @@ public final class AemUploadSdk implements Closeable {
                 if (directBinaryUploadApi == null) {
                     directBinaryUploadApi = DirectBinaryUploadApiBuilder.builder(serverConfig)
                             .withHttpClient(httpClient)
+                            .withApiHttpClientObjectMapper(apiHttpClientObjectMapper)
+                            .withApiHttpClientResponseHandlerFactory(apiHttpClientResponseHandlerFactory)
                             .withFileSplitter(fileSplitter)
                             .build();
                 }
@@ -123,6 +132,8 @@ public final class AemUploadSdk implements Closeable {
                 if (assetFolderApi == null) {
                     assetFolderApi = AssetFolderApiBuilder.builder(serverConfig)
                             .withHttpClient(httpClient)
+                            .withApiHttpClientObjectMapper(apiHttpClientObjectMapper)
+                            .withApiHttpClientResponseHandlerFactory(apiHttpClientResponseHandlerFactory)
                             .withPathNormalizer(pathNormalizer)
                             .build();
                 }
@@ -142,6 +153,8 @@ public final class AemUploadSdk implements Closeable {
                 if (assetMetadataApi == null) {
                     assetMetadataApi = AssetMetadataApiBuilder.builder(serverConfig)
                             .withHttpClient(httpClient)
+                            .withApiHttpClientObjectMapper(apiHttpClientObjectMapper)
+                            .withApiHttpClientResponseHandlerFactory(apiHttpClientResponseHandlerFactory)
                             .withPathNormalizer(pathNormalizer)
                             .build();
                 }
@@ -180,8 +193,11 @@ public final class AemUploadSdk implements Closeable {
         private CloseableHttpClient httpClient;
         private HttpClient5BuilderFactory httpClient5BuilderFactory;
         private HttpClient5BuilderConfigurator httpClient5BuilderConfigurator;
+        private AuthorizationProviderFactory authorizationProviderFactory = new DefaultAuthorizationProviderFactory();
         private FileSplitter fileSplitter;
         private PathNormalizer pathNormalizer;
+        private HttpClientObjectMapper apiHttpClientObjectMapper;
+        private ApiHttpClientResponseHandlerFactory apiHttpClientResponseHandlerFactory;
         private boolean ownedHttpClient = true;
 
         private Builder() {
@@ -258,6 +274,17 @@ public final class AemUploadSdk implements Closeable {
         }
 
         /**
+         * Sets a custom factory for creating authorization providers.
+         *
+         * @param authorizationProviderFactory the authorization provider factory
+         * @return this builder
+         */
+        public Builder authorizationProviderFactory(AuthorizationProviderFactory authorizationProviderFactory) {
+            this.authorizationProviderFactory = authorizationProviderFactory;
+            return this;
+        }
+
+        /**
          * Sets a custom HTTP client.
          * The SDK will not close this client; the caller is responsible for cleanup.
          * If you want the SDK to build the client (e.g., via OSGi-managed customization),
@@ -318,6 +345,16 @@ public final class AemUploadSdk implements Closeable {
             return this;
         }
 
+        public Builder withHttpClientSerializer(final HttpClientObjectMapper httpClientObjectMapper) {
+            this.apiHttpClientObjectMapper = httpClientObjectMapper;
+            return this;
+        }
+
+        public Builder withHttpClientResponseHandlerFactory(final ApiHttpClientResponseHandlerFactory factory) {
+            this.apiHttpClientResponseHandlerFactory = factory;
+            return this;
+        }
+
         /**
          * Builds the AemUploadSdk instance.
          *
@@ -334,11 +371,17 @@ public final class AemUploadSdk implements Closeable {
             if (pathNormalizer == null) {
                 pathNormalizer = new PathNormalizerImpl();
             }
+            if (apiHttpClientObjectMapper == null) {
+                apiHttpClientObjectMapper = DEFAULT_HTTP_CLIENT_SERIALIZER;
+            }
+            if (apiHttpClientResponseHandlerFactory == null) {
+                apiHttpClientResponseHandlerFactory = ApiHttpClientResponseHandlerFactory.create(apiHttpClientObjectMapper);
+            }
 
             // Create HTTP client with auth if not provided
             if (httpClient == null) {
                 httpClient = createHttpClient();
-                ownedHttpClient = true;
+                ownedHttpClient = httpClient5BuilderFactory == null;
             }
 
             return new AemUploadSdk(this);
@@ -346,10 +389,13 @@ public final class AemUploadSdk implements Closeable {
 
         private void validate() {
             if (serverConfig == null) {
-                throw new IllegalStateException("serverUrl or serverConfig must be set");
+                throw new SdkException("serverUrl or serverConfig must be set");
             }
             if (authConfig == null) {
-                throw new IllegalStateException("authentication must be configured (use withAccessToken, withBasicAuth, or withServiceCredentials)");
+                throw new SdkException("authentication must be configured (use withAccessToken, withBasicAuth, or withServiceCredentials)");
+            }
+            if (authorizationProviderFactory == null) {
+                throw new SdkException("authorizationProviderFactory must not be null");
             }
         }
 
@@ -358,27 +404,8 @@ public final class AemUploadSdk implements Closeable {
                     ? httpClient5BuilderFactory.create()
                     : HttpClients.custom();
 
-            // Configure authentication interceptor based on auth type
-            if (authConfig instanceof AccessTokenAuthConfig) {
-                AccessTokenAuthConfig tokenAuth = (AccessTokenAuthConfig) authConfig;
-                ApiAccessTokenProvider tokenProvider = tokenAuth::getAccessToken;
-                builder.addRequestInterceptorFirst(new ApiAuthorizationInterceptorImpl(tokenProvider));
-            } else if (authConfig instanceof ServiceCredentialsAuthConfig) {
-                ServiceCredentialsAuthConfig serviceAuth = (ServiceCredentialsAuthConfig) authConfig;
-                ApiAccessTokenProvider tokenProvider = new ServiceCredentialsApiAccessTokenProvider(serviceAuth);
-                builder.addRequestInterceptorFirst(new ApiAuthorizationInterceptorImpl(tokenProvider));
-            } else if (authConfig instanceof BasicAuthConfig) {
-                BasicAuthConfig basicAuth = (BasicAuthConfig) authConfig;
-                // For basic auth, add a simple interceptor
-                String credentials = basicAuth.getUsername() + ":" + basicAuth.getPassword();
-                String encodedCredentials = Base64.getEncoder().encodeToString(
-                        credentials.getBytes(StandardCharsets.UTF_8));
-                builder.addRequestInterceptorFirst((request, entity, context) -> {
-                    if (!request.containsHeader("Authorization")) {
-                        request.setHeader("Authorization", "Basic " + encodedCredentials);
-                    }
-                });
-            }
+            ApiAuthorizationProvider authorizationProvider = authorizationProviderFactory.create(authConfig);
+            builder.addRequestInterceptorFirst(new ApiAuthorizationInterceptorImpl(authorizationProvider));
 
             if (httpClient5BuilderConfigurator != null) {
                 builder = httpClient5BuilderConfigurator.configure(builder);

@@ -23,6 +23,7 @@ public class AssetMetadataApiBuilder extends BaseApiBuilder<AssetMetadataApiBuil
     }
 
     public AssetMetadataApi build() {
+        validate();
         if (pathNormalizer == null) {
             pathNormalizer = new PathNormalizerImpl();
         }

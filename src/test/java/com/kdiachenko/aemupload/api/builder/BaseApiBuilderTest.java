@@ -44,7 +44,7 @@ class BaseApiBuilderTest {
         }
 
         ApiHttpClientResponseHandlerFactory getResponseHandlerFactory() {
-            return responseHandlerFactory;
+            return httpClientResponseHandlerFactory;
         }
 
         // Expose protected method for testing

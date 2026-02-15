@@ -1,9 +1,9 @@
 package com.kdiachenko.aemupload.http.response;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kdiachenko.aemupload.http.client.HttpClientSerializer;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
-import com.kdiachenko.aemupload.internal.http.JacksonHttpClientSerializer;
+import com.kdiachenko.aemupload.internal.http.JacksonHttpClientObjectMapper;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicClassicHttpResponse;
@@ -19,13 +19,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ApiHttpClientResponseHandlerTest {
 
     private ObjectMapper objectMapper;
-    private HttpClientSerializer serializer;
+    private HttpClientObjectMapper serializer;
     private ApiHttpClientResponseHandler<TestResponse> handler;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        serializer = new JacksonHttpClientSerializer(objectMapper);
+        serializer = new JacksonHttpClientObjectMapper(objectMapper);
         handler = new ApiHttpClientResponseHandler<>(TestResponse.class, serializer);
     }
 

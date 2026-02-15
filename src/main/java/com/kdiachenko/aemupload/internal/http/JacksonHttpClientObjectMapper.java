@@ -1,7 +1,7 @@
 package com.kdiachenko.aemupload.internal.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kdiachenko.aemupload.http.client.HttpClientSerializer;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.exception.SerializationException;
 import lombok.RequiredArgsConstructor;
 
@@ -9,10 +9,10 @@ import lombok.RequiredArgsConstructor;
  * Jackson-based implementation of the Serializer interface.
  */
 @RequiredArgsConstructor
-public class JacksonHttpClientSerializer implements HttpClientSerializer {
+public class JacksonHttpClientObjectMapper implements HttpClientObjectMapper {
     private final ObjectMapper objectMapper;
 
-    public JacksonHttpClientSerializer() {
+    public JacksonHttpClientObjectMapper() {
         this(new ObjectMapper());
     }
 

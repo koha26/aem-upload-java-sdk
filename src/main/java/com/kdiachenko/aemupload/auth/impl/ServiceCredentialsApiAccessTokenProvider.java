@@ -4,18 +4,17 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kdiachenko.aemupload.auth.ApiAccessTokenProvider;
 import com.kdiachenko.aemupload.auth.Clock;
+import com.kdiachenko.aemupload.auth.TokenCache;
 import com.kdiachenko.aemupload.config.ApiAccessTokenConfiguration;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
+import com.kdiachenko.aemupload.internal.auth.InMemoryTokenCache;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hc.client5.http.classic.methods.HttpPut;
@@ -56,13 +55,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
     private final CloseableHttpClient httpClient;
     private final HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory;
     private final Clock clock;
-
-    @Setter(value = AccessLevel.PACKAGE)
-    @Getter(value = AccessLevel.PACKAGE)
-    private String cachedAccessToken;
-    @Setter(value = AccessLevel.PACKAGE)
-    @Getter(value = AccessLevel.PACKAGE)
-    private Instant expiration;
+    private final TokenCache tokenCache;
 
     /**
      * Creates a provider with default HTTP client and system clock.
@@ -74,7 +67,8 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
                 apiAccessTokenConfiguration,
                 HttpClients.createDefault(),
                 ApiHttpClientResponseHandlerFactory.create().createHandler(AccessTokenWrapper.class),
-                Clock.systemClock()
+                Clock.systemClock(),
+                new InMemoryTokenCache()
         );
     }
 
@@ -89,7 +83,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             ApiAccessTokenConfiguration apiAccessTokenConfiguration,
             CloseableHttpClient httpClient,
             HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory) {
-        this(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, Clock.systemClock());
+        this(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, Clock.systemClock(), new InMemoryTokenCache());
     }
 
     /**
@@ -105,16 +99,36 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             CloseableHttpClient httpClient,
             HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory,
             Clock clock) {
+        this(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, clock, new InMemoryTokenCache(clock));
+    }
+
+    /**
+     * Creates a provider with all dependencies injected (for testing).
+     *
+     * @param apiAccessTokenConfiguration the token configuration
+     * @param httpClient the HTTP client
+     * @param responseHandlerFactory the response handler
+     * @param clock the clock for time operations
+     * @param tokenCache token cache implementation
+     */
+    public ServiceCredentialsApiAccessTokenProvider(
+            ApiAccessTokenConfiguration apiAccessTokenConfiguration,
+            CloseableHttpClient httpClient,
+            HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory,
+            Clock clock,
+            TokenCache tokenCache) {
         this.apiAccessTokenConfiguration = apiAccessTokenConfiguration;
         this.httpClient = httpClient;
         this.responseHandlerFactory = responseHandlerFactory;
         this.clock = clock;
+        this.tokenCache = tokenCache;
     }
 
     @Override
     public String getAccessToken() {
-        if (cachedAccessToken != null && isTokenNotExpired()) {
-            return cachedAccessToken;
+        Optional<String> cachedToken = tokenCache.get();
+        if (cachedToken.isPresent()) {
+            return cachedToken.get();
         }
         String jwtToken = getJWTToken();
         if (jwtToken == null) {
@@ -125,9 +139,8 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             return null;
         }
         log.info("Access token has been received. Expires in: {}", accessToken.expiresIn);
-        cachedAccessToken = accessToken.getAccessToken();
-        expiration = clock.now().plusMillis(accessToken.getExpiresIn());
-        return cachedAccessToken;
+        tokenCache.put(accessToken.getAccessToken(), Duration.ofMillis(accessToken.getExpiresIn()));
+        return accessToken.getAccessToken();
     }
 
     /**
@@ -219,10 +232,6 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         }
         Path privateKeyPath = Paths.get(apiAccessTokenConfiguration.getPrivateKeyFilePath());
         return String.join("", Files.readAllLines(privateKeyPath));
-    }
-
-    private boolean isTokenNotExpired() {
-        return expiration != null && clock.now().isBefore(expiration);
     }
 
     private Map<String, String> getFormParams(final String jwtToken) {

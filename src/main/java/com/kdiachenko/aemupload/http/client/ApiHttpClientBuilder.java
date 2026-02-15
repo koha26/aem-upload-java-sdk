@@ -2,14 +2,14 @@ package com.kdiachenko.aemupload.http.client;
 
 import com.kdiachenko.aemupload.http.client.impl.ApiHttpClientImpl;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
-import com.kdiachenko.aemupload.internal.http.JacksonHttpClientSerializer;
+import com.kdiachenko.aemupload.internal.http.JacksonHttpClientObjectMapper;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 
 public class ApiHttpClientBuilder {
-    private static final HttpClientSerializer DEFAULT_HTTP_CLIENT_SERIALIZER = new JacksonHttpClientSerializer();
+    private static final HttpClientObjectMapper DEFAULT_HTTP_CLIENT_SERIALIZER = new JacksonHttpClientObjectMapper();
 
     private final CloseableHttpClient httpClient;
-    private HttpClientSerializer httpClientSerializer;
+    private HttpClientObjectMapper httpClientObjectMapper;
     private ApiHttpClientResponseHandlerFactory responseHandlerFactory;
 
     private ApiHttpClientBuilder(CloseableHttpClient httpClient) {
@@ -20,8 +20,8 @@ public class ApiHttpClientBuilder {
         return new ApiHttpClientBuilder(httpClient);
     }
 
-    public ApiHttpClientBuilder setSerializer(final HttpClientSerializer httpClientSerializer) {
-        this.httpClientSerializer = httpClientSerializer;
+    public ApiHttpClientBuilder setObjectMapper(final HttpClientObjectMapper httpClientObjectMapper) {
+        this.httpClientObjectMapper = httpClientObjectMapper;
         return this;
     }
 
@@ -31,12 +31,12 @@ public class ApiHttpClientBuilder {
     }
 
     public ApiHttpClient build() {
-        if (httpClientSerializer == null) {
-            setSerializer(DEFAULT_HTTP_CLIENT_SERIALIZER);
+        if (httpClientObjectMapper == null) {
+            setObjectMapper(DEFAULT_HTTP_CLIENT_SERIALIZER);
         }
         if (responseHandlerFactory == null) {
-            setResponseHandlerFactory(ApiHttpClientResponseHandlerFactory.create());
+            setResponseHandlerFactory(ApiHttpClientResponseHandlerFactory.create(httpClientObjectMapper));
         }
-        return new ApiHttpClientImpl(httpClient, httpClientSerializer, responseHandlerFactory);
+        return new ApiHttpClientImpl(httpClient, httpClientObjectMapper, responseHandlerFactory);
     }
 }

@@ -1,9 +1,9 @@
 package com.kdiachenko.aemupload.http.client.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kdiachenko.aemupload.http.client.HttpClientSerializer;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.exception.SerializationException;
-import com.kdiachenko.aemupload.internal.http.JacksonHttpClientSerializer;
+import com.kdiachenko.aemupload.internal.http.JacksonHttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpContext;
@@ -38,15 +38,12 @@ import java.util.function.Supplier;
 public class ApiHttpClientImpl implements ApiHttpClient {
 
     private final CloseableHttpClient httpClient;
-    private final HttpClientSerializer httpClientSerializer;
+    private final HttpClientObjectMapper httpClientObjectMapper;
     private final ApiHttpClientResponseHandlerFactory responseHandlerFactory;
 
     public ApiHttpClientImpl(CloseableHttpClient httpClient) {
-        this(httpClient, new JacksonHttpClientSerializer(), ApiHttpClientResponseHandlerFactory.create());
-    }
-
-    public ApiHttpClientImpl(CloseableHttpClient httpClient, ObjectMapper objectMapper) {
-        this(httpClient, new JacksonHttpClientSerializer(objectMapper), ApiHttpClientResponseHandlerFactory.create());
+        this(httpClient, new JacksonHttpClientObjectMapper(),
+                ApiHttpClientResponseHandlerFactory.create(new JacksonHttpClientObjectMapper()));
     }
 
     @Override
@@ -119,7 +116,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     private <T> void setJSONToBody(final HttpEntityContainer request, final T body) {
         try {
-            String json = httpClientSerializer.serialize(body);
+            String json = httpClientObjectMapper.serialize(body);
             request.setEntity(EntityBuilder.create()
                     .setText(json)
                     .setContentType(ContentType.APPLICATION_JSON)

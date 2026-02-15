@@ -23,6 +23,7 @@ public class DirectBinaryUploadApiBuilder extends BaseApiBuilder<DirectBinaryUpl
     }
 
     public DirectBinaryUploadApi build() {
+        validate();
         if (fileSplitter == null) {
             fileSplitter = new FileSplitterImpl();
         }

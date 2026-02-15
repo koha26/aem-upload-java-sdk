@@ -1,6 +1,6 @@
 package com.kdiachenko.aemupload.http.response;
 
-import com.kdiachenko.aemupload.http.client.HttpClientSerializer;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 
 import java.util.Objects;
 
@@ -9,14 +9,14 @@ import java.util.Objects;
  */
 public final class DefaultApiHttpClientResponseHandlerFactory implements ApiHttpClientResponseHandlerFactory {
 
-    private final HttpClientSerializer serializer;
+    private final HttpClientObjectMapper serializer;
 
     /**
      * Creates a new factory with the given serializer.
      *
      * @param serializer the serializer to use for response deserialization
      */
-    public DefaultApiHttpClientResponseHandlerFactory(HttpClientSerializer serializer) {
+    public DefaultApiHttpClientResponseHandlerFactory(HttpClientObjectMapper serializer) {
         this.serializer = Objects.requireNonNull(serializer, "serializer must not be null");
     }
 

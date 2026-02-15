@@ -5,5 +5,4 @@
  * {@code com.kdiachenko.aemupload.internal.api} in a future version.
  * Do not depend on classes in this package directly.
  */
-@Deprecated(forRemoval = true)
 package com.kdiachenko.aemupload.api.impl;

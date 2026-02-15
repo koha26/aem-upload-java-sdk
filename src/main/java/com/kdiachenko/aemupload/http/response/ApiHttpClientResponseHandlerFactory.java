@@ -1,12 +1,12 @@
 package com.kdiachenko.aemupload.http.response;
 
-import com.kdiachenko.aemupload.http.client.HttpClientSerializer;
-import com.kdiachenko.aemupload.internal.http.JacksonHttpClientSerializer;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
+import com.kdiachenko.aemupload.internal.http.JacksonHttpClientObjectMapper;
 
 /**
  * Factory for creating HTTP response handlers.
  *
- * <p>Use {@link #create()} or {@link #create(HttpClientSerializer)} to create instances.</p>
+ * <p>Use {@link #create()} or {@link #create(HttpClientObjectMapper)} to create instances.</p>
  */
 public interface ApiHttpClientResponseHandlerFactory {
 
@@ -16,7 +16,7 @@ public interface ApiHttpClientResponseHandlerFactory {
      * @return a new factory instance
      */
     static ApiHttpClientResponseHandlerFactory create() {
-        return create(new JacksonHttpClientSerializer());
+        return create(new JacksonHttpClientObjectMapper());
     }
 
     /**
@@ -25,7 +25,7 @@ public interface ApiHttpClientResponseHandlerFactory {
      * @param serializer the serializer to use
      * @return a new factory instance
      */
-    static ApiHttpClientResponseHandlerFactory create(HttpClientSerializer serializer) {
+    static ApiHttpClientResponseHandlerFactory create(HttpClientObjectMapper serializer) {
         return new DefaultApiHttpClientResponseHandlerFactory(serializer);
     }
 

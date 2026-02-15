@@ -1,6 +1,6 @@
 package com.kdiachenko.aemupload.http.response;
 
-import com.kdiachenko.aemupload.http.client.HttpClientSerializer;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,7 @@ import java.util.Map;
 public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseHandler<ApiHttpResponse<T>> {
 
     private final Class<T> responseType;
-    private HttpClientSerializer httpClientSerializer;
+    private HttpClientObjectMapper httpClientObjectMapper;
 
     @Override
     public ApiHttpResponse<T> handleEntity(final HttpEntity entity) throws IOException {
@@ -27,7 +27,7 @@ public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseH
             if (Void.class.equals(responseType)) {
                 return ApiHttpResponse.<T>builder().build();
             }
-            T body = httpClientSerializer.deserialize(responseBody, responseType);
+            T body = httpClientObjectMapper.deserialize(responseBody, responseType);
             return ApiHttpResponse.<T>builder()
                     .body(body)
                     .build();
@@ -49,7 +49,7 @@ public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseH
                 );
                 return ApiHttpResponse.<T>builder()
                         .status(response.getCode())
-                        .errorMessage(httpClientSerializer.serialize(errorObject))
+                        .errorMessage(httpClientObjectMapper.serialize(errorObject))
                         .build();
             }
             if (entity == null) {

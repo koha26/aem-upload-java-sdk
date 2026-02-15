@@ -1,5 +1,6 @@
 package com.kdiachenko.aemupload.internal.auth;
 
+import com.kdiachenko.aemupload.auth.Clock;
 import com.kdiachenko.aemupload.auth.TokenCache;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,6 +15,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class InMemoryTokenCache implements TokenCache {
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    private final Clock clock;
 
     @Getter
     @Setter
@@ -23,11 +25,19 @@ public class InMemoryTokenCache implements TokenCache {
     @Setter
     private Instant expiration;
 
+    public InMemoryTokenCache() {
+        this(Clock.systemClock());
+    }
+
+    public InMemoryTokenCache(Clock clock) {
+        this.clock = clock;
+    }
+
     @Override
     public Optional<String> get() {
         lock.readLock().lock();
         try {
-            if (token != null && expiration != null && Instant.now().isBefore(expiration)) {
+            if (token != null && expiration != null && clock.now().isBefore(expiration)) {
                 return Optional.of(token);
             }
             return Optional.empty();
@@ -41,7 +51,7 @@ public class InMemoryTokenCache implements TokenCache {
         lock.writeLock().lock();
         try {
             this.token = token;
-            expiration = Instant.now().plus(ttl);
+            expiration = clock.now().plus(ttl);
         } finally {
             lock.writeLock().unlock();
         }
@@ -58,4 +68,3 @@ public class InMemoryTokenCache implements TokenCache {
         }
     }
 }
-

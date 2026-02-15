@@ -2,7 +2,10 @@ package com.kdiachenko.aemupload.auth.impl;
 
 import com.kdiachenko.aemupload.common.ApiAccessTokenConfigurationStub;
 import com.kdiachenko.aemupload.config.ApiAccessTokenConfiguration;
+import com.kdiachenko.aemupload.auth.Clock;
+import com.kdiachenko.aemupload.auth.TokenCache;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.internal.auth.InMemoryTokenCache;
 import org.apache.hc.client5.http.classic.methods.HttpPut;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.core5.http.Header;
@@ -26,9 +29,9 @@ import java.nio.file.Paths;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -58,6 +61,7 @@ class ServiceCredentialsApiAccessTokenProviderTest {
 
     private ServiceCredentialsApiAccessTokenProvider provider;
     private ServiceCredentialsApiAccessTokenProvider.AccessTokenWrapper tokenWrapper;
+    private InMemoryTokenCache tokenCache;
 
     @BeforeEach
     void setUp() {
@@ -71,13 +75,19 @@ class ServiceCredentialsApiAccessTokenProviderTest {
                 .metaScopes(List.of("scope1", "scope2"))
                 .build();
         tokenWrapper = new ServiceCredentialsApiAccessTokenProvider.AccessTokenWrapper("abc123", "bearer", 3600);
-        provider = new ServiceCredentialsApiAccessTokenProviderTestWrapper(config, httpClient, responseHandler);
+        tokenCache = new InMemoryTokenCache();
+        provider = new ServiceCredentialsApiAccessTokenProviderTestWrapper(
+                config,
+                httpClient,
+                responseHandler,
+                Clock.systemClock(),
+                tokenCache
+        );
     }
 
     @Test
     void testGetAccessToken_whenTokenIsCachedAndValid_shouldReturnCached() {
-        provider.setCachedAccessToken("cached_token");
-        provider.setExpiration(Instant.now().plusSeconds(10));
+        tokenCache.put("cached_token", Duration.ofSeconds(10));
 
         assertEquals("cached_token", provider.getAccessToken());
     }
@@ -115,24 +125,23 @@ class ServiceCredentialsApiAccessTokenProviderTest {
         mockHttpClientResponse(response);
 
         assertThat(provider.getAccessToken()).isEqualTo("abc123");
-        assertThat(provider.getCachedAccessToken()).isEqualTo("abc123");
+        assertThat(tokenCache.getToken()).isEqualTo("abc123");
         Instant expectedExpiration = Instant.now().plusMillis(3600);
-        assertThat(provider.getExpiration()).isCloseTo(expectedExpiration, within(1, ChronoUnit.SECONDS));
+        assertThat(tokenCache.getExpiration()).isCloseTo(expectedExpiration, within(1, ChronoUnit.SECONDS));
     }
 
     @Test
     void testGetAccessToken_whenTokenIsCachedAndExpired_shouldReturnNewToken() throws IOException {
         config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/test-rsa_valid-key.txt");
-        provider.setCachedAccessToken("cached_token");
-        provider.setExpiration(Instant.now().minusSeconds(10));
+        tokenCache.put("cached_token", Duration.ofMillis(-10));
 
         ApiHttpResponse<Object> response = ApiHttpResponse.builder().body(tokenWrapper).status(200).build();
         mockHttpClientResponse(response);
 
         assertThat(provider.getAccessToken()).isEqualTo("abc123");
-        assertThat(provider.getCachedAccessToken()).isEqualTo("abc123");
+        assertThat(tokenCache.getToken()).isEqualTo("abc123");
         Instant expectedExpiration = Instant.now().plusMillis(3600);
-        assertThat(provider.getExpiration()).isCloseTo(expectedExpiration, within(1, ChronoUnit.SECONDS));
+        assertThat(tokenCache.getExpiration()).isCloseTo(expectedExpiration, within(1, ChronoUnit.SECONDS));
     }
 
     @Test
@@ -144,9 +153,9 @@ class ServiceCredentialsApiAccessTokenProviderTest {
         mockHttpClientResponse(response);
 
         assertThat(provider.getAccessToken()).isEqualTo("abc123");
-        assertThat(provider.getCachedAccessToken()).isEqualTo("abc123");
+        assertThat(tokenCache.getToken()).isEqualTo("abc123");
         Instant expectedExpiration = Instant.now().plusMillis(3600);
-        assertThat(provider.getExpiration()).isCloseTo(expectedExpiration, within(1, ChronoUnit.SECONDS));
+        assertThat(tokenCache.getExpiration()).isCloseTo(expectedExpiration, within(1, ChronoUnit.SECONDS));
     }
 
     @Test
@@ -262,8 +271,10 @@ class ServiceCredentialsApiAccessTokenProviderTest {
         public ServiceCredentialsApiAccessTokenProviderTestWrapper(
                 ApiAccessTokenConfiguration apiAccessTokenConfiguration,
                 CloseableHttpClient httpClient,
-                HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory) {
-            super(apiAccessTokenConfiguration, httpClient, responseHandlerFactory);
+                HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory,
+                Clock clock,
+                TokenCache tokenCache) {
+            super(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, clock, tokenCache);
         }
     }
 }

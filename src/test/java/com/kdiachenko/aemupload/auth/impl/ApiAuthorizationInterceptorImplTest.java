@@ -1,7 +1,6 @@
 package com.kdiachenko.aemupload.auth.impl;
 
 import com.kdiachenko.aemupload.auth.ApiAccessTokenProvider;
-import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.HttpContexts;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.core5.http.EntityDetails;

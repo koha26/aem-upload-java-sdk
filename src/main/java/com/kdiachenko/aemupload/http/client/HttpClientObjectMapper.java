@@ -6,7 +6,7 @@ import com.kdiachenko.aemupload.exception.SerializationException;
  * Interface for serializing and deserializing objects.
  * Implementations should handle JSON, XML, or other formats.
  */
-public interface HttpClientSerializer {
+public interface HttpClientObjectMapper {
     /**
      * Serializes an object to a string representation.
      *

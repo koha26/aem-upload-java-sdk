@@ -23,6 +23,7 @@ public class AssetFolderApiBuilder extends BaseApiBuilder<AssetFolderApiBuilder>
     }
 
     public AssetFolderApi build() {
+        validate();
         if (pathNormalizer == null) {
             pathNormalizer = new PathNormalizerImpl();
         }

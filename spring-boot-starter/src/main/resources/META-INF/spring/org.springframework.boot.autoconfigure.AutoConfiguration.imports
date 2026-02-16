@@ -1,0 +1,2 @@
+com.kdiachenko.aemupload.spring.AemUploadSdkAutoConfiguration
+com.kdiachenko.aemupload.spring.AemUploadSdkHealthAutoConfiguration

@@ -1,6 +1,8 @@
 package com.kdiachenko.aemupload.http.client.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
+import com.kdiachenko.aemupload.exception.SerializationException;
+import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpContext;
@@ -35,11 +37,12 @@ import java.util.function.Supplier;
 public class ApiHttpClientImpl implements ApiHttpClient {
 
     private final CloseableHttpClient httpClient;
-    private final ObjectMapper objectMapper;
+    private final HttpClientObjectMapper httpClientObjectMapper;
     private final ApiHttpClientResponseHandlerFactory responseHandlerFactory;
 
     public ApiHttpClientImpl(CloseableHttpClient httpClient) {
-        this(httpClient, new ObjectMapper(), ApiHttpClientResponseHandlerFactory.getInstance());
+        this(httpClient, new JacksonHttpClientObjectMapper(),
+                ApiHttpClientResponseHandlerFactory.create(new JacksonHttpClientObjectMapper()));
     }
 
     @Override
@@ -78,9 +81,11 @@ public class ApiHttpClientImpl implements ApiHttpClient {
             return httpClient.execute(request, clientContext, responseHandlerFactory.createHandler(responseType));
         } catch (IOException e) {
             log.debug("Error while executing request", e);
+            String cause = e.getMessage();
             return ApiHttpResponse.<T>builder()
                     .status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
-                    .errorMessage("Error while executing request: " + request.getMethod() + " " + request.getRequestUri())
+                    .errorMessage("Error while executing request: " + request.getMethod() + " "
+                            + request.getRequestUri() + (cause != null ? ". Cause: " + cause : ""))
                     .build();
         }
     }
@@ -102,7 +107,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
             return;
         }
         if (body instanceof Map) {
-            setFormDataToBody(request, (Map<String, Object>) body);
+            setFormDataToBody(request, (Map<?, ?>) body);
             return;
         }
         setJSONToBody(request, body);
@@ -110,20 +115,24 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     private <T> void setJSONToBody(final HttpEntityContainer request, final T body) {
         try {
-            String json = objectMapper.writeValueAsString(body);
+            String json = httpClientObjectMapper.serialize(body);
             request.setEntity(EntityBuilder.create()
                     .setText(json)
                     .setContentType(ContentType.APPLICATION_JSON)
                     .build());
-        } catch (IOException e) {
+        } catch (SerializationException e) {
             log.debug("Failed to serialize request body", e);
-            throw new UncheckedIOException("Failed to serialize request body", e);
+            if (e.getCause() instanceof IOException) {
+                throw new UncheckedIOException((IOException) e.getCause());
+            }
+            throw new UncheckedIOException(new IOException("Failed to serialize request body", e));
         }
     }
 
-    private void setFormDataToBody(final HttpEntityContainer request, final Map<String, Object> body) {
+    private void setFormDataToBody(final HttpEntityContainer request, final Map<?, ?> body) {
         List<NameValuePair> formParams = new ArrayList<>();
-        body.forEach((key, value) -> formParams.add(new BasicNameValuePair(key, String.valueOf(value))));
+        body.forEach((key, value) ->
+                formParams.add(new BasicNameValuePair(String.valueOf(key), String.valueOf(value))));
         request.setEntity(EntityBuilder.create()
                 .setParameters(formParams)
                 .build());
@@ -131,34 +140,31 @@ public class ApiHttpClientImpl implements ApiHttpClient {
 
     private <T> void setInputStreamToBody(final HttpEntityContainer request,
                                           final ApiHttpEntity<T> entity, InputStream body) {
-        try {
-            request.setEntity(EntityBuilder.create()
-                    .setBinary(toByteArray(body))
-                    .setContentType(ContentType.create(entity.getHeaders().get(HttpHeaders.CONTENT_TYPE)))
-                    .build());
-        } catch (IOException e) {
-            log.error("Failed to serialize request body of Input Stream type", e);
-            throw new UncheckedIOException(e);
-        }
+        Map<String, String> headers = entity.getHeaders();
+        String contentTypeHeader = headers != null ? headers.get(HttpHeaders.CONTENT_TYPE) : null;
+        ContentType contentType = contentTypeHeader != null
+                ? ContentType.parse(contentTypeHeader)
+                : ContentType.APPLICATION_OCTET_STREAM;
+        request.setEntity(EntityBuilder.create()
+                .setStream(body)
+                .setContentType(contentType)
+                .build());
     }
 
     private <R> ApiHttpResponse<R> safeExecute(final Supplier<ApiHttpResponse<R>> request) {
         try {
             return request.get();
         } catch (Exception e) {
+            log.debug("Unexpected error while executing request", e);
             return ApiHttpResponse.<R>builder()
                     .status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
-                    .errorMessage("Error while executing request")
+                    .errorMessage("Unexpected error while executing request: " + e.getMessage())
                     .build();
         }
     }
 
     private <E> void setHeaders(final HttpUriRequestBase httpRequest, final ApiHttpEntity<E> entity) {
         entity.getHeaders().forEach(httpRequest::setHeader);
-    }
-
-    private byte[] toByteArray(final InputStream inputStream) throws IOException {
-        return inputStream.readAllBytes();
     }
 
 }

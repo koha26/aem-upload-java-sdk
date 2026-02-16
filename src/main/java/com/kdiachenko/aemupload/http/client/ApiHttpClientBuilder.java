@@ -1,15 +1,29 @@
 package com.kdiachenko.aemupload.http.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import com.kdiachenko.aemupload.http.client.impl.ApiHttpClientImpl;
+import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
+import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 
+/**
+ * Builder for creating {@link ApiHttpClient} instances.
+ *
+ * <p>Conceptually, this builder assembles HTTP transport with serializers and
+ * response handlers so the SDK can map HTTP responses into domain objects.</p>
+ *
+ * <p>Example:</p>
+ * <pre>{@code
+ * ApiHttpClient client = ApiHttpClientBuilder.builder(httpClient)
+ *     .setObjectMapper(new JacksonHttpClientObjectMapper())
+ *     .setResponseHandlerFactory(ApiHttpClientResponseHandlerFactory.create())
+ *     .build();
+ * }</pre>
+ */
 public class ApiHttpClientBuilder {
-    private static final ObjectMapper DEFAULT_OBJECT_MAPPER = new ObjectMapper();
+    private static final HttpClientObjectMapper DEFAULT_HTTP_CLIENT_SERIALIZER = new JacksonHttpClientObjectMapper();
 
     private final CloseableHttpClient httpClient;
-    private ObjectMapper objectMapper;
+    private HttpClientObjectMapper httpClientObjectMapper;
     private ApiHttpClientResponseHandlerFactory responseHandlerFactory;
 
     private ApiHttpClientBuilder(CloseableHttpClient httpClient) {
@@ -20,8 +34,8 @@ public class ApiHttpClientBuilder {
         return new ApiHttpClientBuilder(httpClient);
     }
 
-    public ApiHttpClientBuilder setObjectMapper(final ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public ApiHttpClientBuilder setObjectMapper(final HttpClientObjectMapper httpClientObjectMapper) {
+        this.httpClientObjectMapper = httpClientObjectMapper;
         return this;
     }
 
@@ -31,12 +45,12 @@ public class ApiHttpClientBuilder {
     }
 
     public ApiHttpClient build() {
-        if (objectMapper == null) {
-            setObjectMapper(DEFAULT_OBJECT_MAPPER);
+        if (httpClientObjectMapper == null) {
+            setObjectMapper(DEFAULT_HTTP_CLIENT_SERIALIZER);
         }
         if (responseHandlerFactory == null) {
-            setResponseHandlerFactory(ApiHttpClientResponseHandlerFactory.getInstance());
+            setResponseHandlerFactory(ApiHttpClientResponseHandlerFactory.create(httpClientObjectMapper));
         }
-        return new ApiHttpClientImpl(httpClient, objectMapper, responseHandlerFactory);
+        return new ApiHttpClientImpl(httpClient, httpClientObjectMapper, responseHandlerFactory);
     }
 }

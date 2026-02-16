@@ -1,7 +1,9 @@
 package com.kdiachenko.aemupload.http.response;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicClassicHttpResponse;
@@ -17,12 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ApiHttpClientResponseHandlerTest {
 
     private ObjectMapper objectMapper;
+    private HttpClientObjectMapper serializer;
     private ApiHttpClientResponseHandler<TestResponse> handler;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        handler = new ApiHttpClientResponseHandler<>(TestResponse.class, objectMapper);
+        serializer = new JacksonHttpClientObjectMapper(objectMapper);
+        handler = new ApiHttpClientResponseHandler<>(TestResponse.class, serializer);
     }
 
     @Test
@@ -39,7 +43,7 @@ class ApiHttpClientResponseHandlerTest {
 
     @Test
     void handleEntity_shouldReturnEmptyForVoidType() throws IOException {
-        ApiHttpClientResponseHandler<Void> voidHandler = new ApiHttpClientResponseHandler<>(Void.class, objectMapper);
+        ApiHttpClientResponseHandler<Void> voidHandler = new ApiHttpClientResponseHandler<>(Void.class, serializer);
         HttpEntity entity = new StringEntity("{}");
 
         ApiHttpResponse<Void> response = voidHandler.handleEntity(entity);
@@ -78,12 +82,27 @@ class ApiHttpClientResponseHandlerTest {
     }
 
     @Test
-    void handleResponse_shouldReturnNullIfEntityIsNull() throws IOException {
+    void handleResponse_shouldHandleErrorWhenEntityIsNull() throws IOException {
+        BasicClassicHttpResponse response = new BasicClassicHttpResponse(500, "Server Error");
+
+        ApiHttpResponse<TestResponse> result = handler.handleResponse(response);
+
+        assertThat(result.getStatus()).isEqualTo(500);
+        assertThatJson(result.getErrorMessage())
+                .isObject()
+                .containsEntry("apiResponse", "")
+                .containsEntry("reasonPhrase", "Server Error");
+    }
+
+    @Test
+    void handleResponse_shouldReturnEmptyResponseIfEntityIsNull() throws IOException {
         BasicClassicHttpResponse response = new BasicClassicHttpResponse(200);
 
         ApiHttpResponse<TestResponse> result = handler.handleResponse(response);
 
-        assertThat(result).isNull();
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo(200);
+        assertThat(result.getBody()).isNull();
     }
 
     @Test

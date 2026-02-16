@@ -1,76 +1,44 @@
 package com.kdiachenko.aemupload.config;
 
-import io.wcm.testing.mock.aem.junit5.AemContextExtension;
-import org.apache.sling.testing.mock.osgi.context.OsgiContextImpl;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-@ExtendWith(AemContextExtension.class)
 class ApiAccessTokenConfigurationProviderTest {
-    private final OsgiContextImpl osgiContext = new OsgiContextImpl();
 
     @Test
-    void testNotInitializedApiAccessTokenConfiguration() {
-        ApiAccessTokenConfiguration apiAccessTokenConfiguration = osgiContext.getService(ApiAccessTokenConfiguration.class);
+    void activate_shouldPopulateConfiguration() {
+        ApiAccessTokenConfigurationProvider provider = new ApiAccessTokenConfigurationProvider();
+        ApiAccessTokenConfigurationProvider.Config config = mock(ApiAccessTokenConfigurationProvider.Config.class);
 
-        assertNull(apiAccessTokenConfiguration);
-    }
+        when(config.localDevelopmentAccessToken()).thenReturn("token");
+        when(config.imsEndpoint()).thenReturn("https://ims.example.com");
+        when(config.metaScopes()).thenReturn(new String[]{"scope1", "scope2"});
+        when(config.clientId()).thenReturn("client");
+        when(config.clientSecret()).thenReturn("secret");
+        when(config.email()).thenReturn("email@example.com");
+        when(config.id()).thenReturn("id");
+        when(config.org()).thenReturn("org");
+        when(config.privateKeyFilePath()).thenReturn("/path/key.pem");
+        when(config.privateKeyContent()).thenReturn("key");
+        when(config.tokenLifeTimeInSec()).thenReturn(3600);
 
-    @Test
-    void testApiAccessTokenConfigurationInitializationWithCustomConfiguration() {
-        osgiContext.registerInjectActivateService(ApiAccessTokenConfigurationProvider.class, Map.of(
-                "localDevelopmentAccessToken", "my local token",
-                "imsEndpoint", "https://ims.adobelogin.com/ims/exchange/jwt",
-                "metaScopes", new String[] {"aem_cloud_api", "aem_cloud_api2"},
-                "clientId", "client 123",
-                "clientSecret", "secret 456",
-                "id", "id 789",
-                "org", "org 111",
-                "privateKeyFilePath", "/tmp/certs/private.key",
-                "privateKeyContent", "privateKey content",
-                "tokenLifeTimeInSec", 60
-        ));
+        provider.activate(config);
 
-        ApiAccessTokenConfiguration configuration = osgiContext.getService(ApiAccessTokenConfiguration.class);
-
-        assertNotNull(configuration);
-        assertEquals("my local token", configuration.getLocalDevelopmentAccessToken());
-        assertEquals("https://ims.adobelogin.com/ims/exchange/jwt", configuration.getImsEndpoint());
-        assertEquals(List.of("aem_cloud_api", "aem_cloud_api2"), configuration.getMetaScopes());
-        assertEquals("client 123", configuration.getClientId());
-        assertEquals("secret 456", configuration.getClientSecret());
-        assertNull(configuration.getEmail());
-        assertEquals("id 789", configuration.getId());
-        assertEquals("org 111", configuration.getOrg());
-        assertEquals("/tmp/certs/private.key", configuration.getPrivateKeyFilePath());
-        assertEquals("privateKey content", configuration.getPrivateKeyContent());
-        assertEquals(60, configuration.getTokenLifeTimeInSec());
-    }
-
-    @Test
-    void testApiAccessTokenConfigurationWithDefaultConfiguration() {
-        osgiContext.registerInjectActivateService(ApiAccessTokenConfigurationProvider.class);
-
-        ApiAccessTokenConfiguration configuration = osgiContext.getService(ApiAccessTokenConfiguration.class);
-
-        assertNotNull(configuration);
-        assertNull(configuration.getLocalDevelopmentAccessToken());
-        assertNull(configuration.getImsEndpoint());
-        assertEquals(List.of(), configuration.getMetaScopes());
-        assertNull(configuration.getClientId());
-        assertNull(configuration.getClientSecret());
-        assertNull(configuration.getEmail());
-        assertNull(configuration.getId());
-        assertNull(configuration.getOrg());
-        assertNull(configuration.getPrivateKeyFilePath());
-        assertNull(configuration.getPrivateKeyContent());
-        assertEquals(86400, configuration.getTokenLifeTimeInSec());
+        assertEquals("https://ims.example.com", provider.getImsEndpoint());
+        assertEquals("id", provider.getId());
+        assertEquals("org", provider.getOrg());
+        assertEquals("client", provider.getClientId());
+        assertEquals("secret", provider.getClientSecret());
+        assertEquals("email@example.com", provider.getEmail());
+        assertEquals(List.of("scope1", "scope2"), provider.getMetaScopes());
+        assertEquals("/path/key.pem", provider.getPrivateKeyFilePath());
+        assertEquals("key", provider.getPrivateKeyContent());
+        assertEquals(3600, provider.getTokenLifeTimeInSec());
+        assertEquals("token", provider.getLocalDevelopmentAccessToken());
     }
 }

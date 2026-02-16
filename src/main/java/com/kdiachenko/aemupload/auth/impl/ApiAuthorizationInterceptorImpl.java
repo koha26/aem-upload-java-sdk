@@ -1,8 +1,8 @@
 package com.kdiachenko.aemupload.auth.impl;
 
-import com.kdiachenko.aemupload.auth.ApiAccessTokenProvider;
 import com.kdiachenko.aemupload.auth.ApiAuthorizationInterceptor;
-import com.kdiachenko.aemupload.http.client.ApiHttpClient;
+import com.kdiachenko.aemupload.auth.ApiAuthorizationProvider;
+import com.kdiachenko.aemupload.http.entity.HttpContexts;
 import lombok.AllArgsConstructor;
 import org.apache.hc.core5.http.EntityDetails;
 import org.apache.hc.core5.http.HttpHeaders;
@@ -12,13 +12,13 @@ import org.apache.hc.core5.http.protocol.HttpContext;
 @AllArgsConstructor
 public class ApiAuthorizationInterceptorImpl implements ApiAuthorizationInterceptor {
 
-    private ApiAccessTokenProvider apiAccessTokenProvider;
+    private ApiAuthorizationProvider apiAuthorizationProvider;
 
     @Override
     public void process(final HttpRequest httpRequest, final EntityDetails entityDetails,
                         final HttpContext httpContext) {
         if (isAuthorizationRequired(httpRequest, httpContext) && !httpRequest.containsHeader(HttpHeaders.AUTHORIZATION)) {
-            httpRequest.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiAccessTokenProvider.getAccessToken());
+            apiAuthorizationProvider.applyAuthorization(httpRequest, httpContext);
         }
     }
 
@@ -28,7 +28,7 @@ public class ApiAuthorizationInterceptorImpl implements ApiAuthorizationIntercep
     }
 
     private boolean isAuthorizableContext(final HttpContext httpContext) {
-        Object attribute = httpContext.getAttribute(ApiHttpClient.API_AUTHORIZATION_REQUIRED_REQ_ATTR);
+        Object attribute = httpContext.getAttribute(HttpContexts.AUTHORIZATION_REQUIRED_ATTR);
         return attribute instanceof String && Boolean.parseBoolean(String.valueOf(attribute));
     }
 }

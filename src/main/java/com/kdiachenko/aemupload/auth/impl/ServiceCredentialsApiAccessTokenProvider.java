@@ -3,22 +3,20 @@ package com.kdiachenko.aemupload.auth.impl;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kdiachenko.aemupload.auth.ApiAccessTokenProvider;
+import com.kdiachenko.aemupload.auth.Clock;
+import com.kdiachenko.aemupload.auth.TokenCache;
 import com.kdiachenko.aemupload.config.ApiAccessTokenConfiguration;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
+import com.kdiachenko.aemupload.internal.auth.InMemoryTokenCache;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.time.DateUtils;
 import org.apache.hc.client5.http.classic.methods.HttpPut;
 import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -29,6 +27,7 @@ import org.apache.hc.core5.http.io.HttpClientResponseHandler;
 import org.apache.hc.core5.http.message.BasicNameValuePair;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,6 +36,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
@@ -49,31 +50,86 @@ import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
 import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 
 @Slf4j
-@RequiredArgsConstructor
 public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenProvider {
 
     private final ApiAccessTokenConfiguration apiAccessTokenConfiguration;
     private final CloseableHttpClient httpClient;
     private final HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory;
-    @Setter(value = AccessLevel.PACKAGE)
-    @Getter(value = AccessLevel.PACKAGE)
-    private String cachedAccessToken;
-    @Setter(value = AccessLevel.PACKAGE)
-    @Getter(value = AccessLevel.PACKAGE)
-    private Date expiration;
+    private final Clock clock;
+    private final TokenCache tokenCache;
 
+    /**
+     * Creates a provider with default HTTP client and system clock.
+     *
+     * @param apiAccessTokenConfiguration the token configuration
+     */
     public ServiceCredentialsApiAccessTokenProvider(ApiAccessTokenConfiguration apiAccessTokenConfiguration) {
         this(
                 apiAccessTokenConfiguration,
                 HttpClients.createDefault(),
-                ApiHttpClientResponseHandlerFactory.getInstance().createHandler(AccessTokenWrapper.class)
+                ApiHttpClientResponseHandlerFactory.create().createHandler(AccessTokenWrapper.class),
+                Clock.systemClock(),
+                new InMemoryTokenCache()
         );
+    }
+
+    /**
+     * Creates a provider with custom dependencies (for testing).
+     *
+     * @param apiAccessTokenConfiguration the token configuration
+     * @param httpClient                  the HTTP client
+     * @param responseHandlerFactory      the response handler
+     */
+    public ServiceCredentialsApiAccessTokenProvider(
+            ApiAccessTokenConfiguration apiAccessTokenConfiguration,
+            CloseableHttpClient httpClient,
+            HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory) {
+        this(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, Clock.systemClock(), new InMemoryTokenCache());
+    }
+
+    /**
+     * Creates a provider with all dependencies injected (for testing).
+     *
+     * @param apiAccessTokenConfiguration the token configuration
+     * @param httpClient                  the HTTP client
+     * @param responseHandlerFactory      the response handler
+     * @param clock                       the clock for time operations
+     */
+    public ServiceCredentialsApiAccessTokenProvider(
+            ApiAccessTokenConfiguration apiAccessTokenConfiguration,
+            CloseableHttpClient httpClient,
+            HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory,
+            Clock clock) {
+        this(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, clock, new InMemoryTokenCache(clock));
+    }
+
+    /**
+     * Creates a provider with all dependencies injected (for testing).
+     *
+     * @param apiAccessTokenConfiguration the token configuration
+     * @param httpClient                  the HTTP client
+     * @param responseHandlerFactory      the response handler
+     * @param clock                       the clock for time operations
+     * @param tokenCache                  token cache implementation
+     */
+    public ServiceCredentialsApiAccessTokenProvider(
+            ApiAccessTokenConfiguration apiAccessTokenConfiguration,
+            CloseableHttpClient httpClient,
+            HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory,
+            Clock clock,
+            TokenCache tokenCache) {
+        this.apiAccessTokenConfiguration = apiAccessTokenConfiguration;
+        this.httpClient = httpClient;
+        this.responseHandlerFactory = responseHandlerFactory;
+        this.clock = clock;
+        this.tokenCache = tokenCache;
     }
 
     @Override
     public String getAccessToken() {
-        if (cachedAccessToken != null && isTokenNotExpired()) {
-            return cachedAccessToken;
+        Optional<String> cachedToken = tokenCache.get();
+        if (cachedToken.isPresent()) {
+            return cachedToken.get();
         }
         String jwtToken = getJWTToken();
         if (jwtToken == null) {
@@ -84,13 +140,8 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             return null;
         }
         log.info("Access token has been received. Expires in: {}", accessToken.expiresIn);
-        cachedAccessToken = accessToken.getAccessToken();
-        expiration = DateUtils.addMilliseconds(getDate(), Math.toIntExact(accessToken.getExpiresIn()));
-        return cachedAccessToken;
-    }
-
-    Date getDate() {
-        return new Date();
+        tokenCache.put(accessToken.getAccessToken(), Duration.ofSeconds(accessToken.getExpiresIn()));
+        return accessToken.getAccessToken();
     }
 
     private String getJWTToken() {
@@ -106,16 +157,34 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
     }
 
     private Claims createClaims() {
-        String imsHost = apiAccessTokenConfiguration.getImsEndpoint();
+        String imsHost = getImsHost();
+        Instant expirationTime = clock.now().plusSeconds(apiAccessTokenConfiguration.getTokenLifeTimeInSec());
         Claims jwtClaims = Jwts.claims()
                 .setSubject(apiAccessTokenConfiguration.getId())
                 .setIssuer(apiAccessTokenConfiguration.getOrg())
                 .setAudience("https://" + imsHost + "/c/" + apiAccessTokenConfiguration.getClientId())
-                .setExpiration(DateUtils.addSeconds(getDate(), apiAccessTokenConfiguration.getTokenLifeTimeInSec()));
+                .setExpiration(Date.from(expirationTime));
         apiAccessTokenConfiguration.getMetaScopes().stream()
                 .map(metaScope -> "https://" + imsHost + "/s/" + metaScope)
                 .forEach(value -> jwtClaims.put(value, true));
         return jwtClaims;
+    }
+
+    /**
+     * Extracts IMS host from the configured endpoint URL.
+     * Falls back to the raw value if it isn't a valid URI.
+     */
+    private String getImsHost() {
+        String imsEndpoint = apiAccessTokenConfiguration.getImsEndpoint();
+        if (imsEndpoint == null) {
+            return null;
+        }
+        try {
+            URI uri = URI.create(imsEndpoint);
+            return uri.getHost() != null ? uri.getHost() : imsEndpoint;
+        } catch (IllegalArgumentException e) {
+            return imsEndpoint;
+        }
     }
 
     private RSAPrivateKey getRsaPrivateKey() {
@@ -132,7 +201,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
                     .trim();
             byte[] decode = Base64.getDecoder().decode(privateKeyContentNormalized);
             PKCS8EncodedKeySpec keySpecPv = new PKCS8EncodedKeySpec(decode, "RSA");
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            KeyFactory keyFactory = getKeyFactory();
             return (RSAPrivateKey) keyFactory.generatePrivate(keySpecPv);
         } catch (NoSuchAlgorithmException e) {
             log.error("No RSA algorithm", e);
@@ -174,16 +243,19 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         return String.join("", Files.readAllLines(privateKeyPath));
     }
 
-    private boolean isTokenNotExpired() {
-        return getDate().before(expiration);
-    }
-
     private Map<String, String> getFormParams(final String jwtToken) {
         var formParams = new HashMap<String, String>();
         formParams.put("client_id", apiAccessTokenConfiguration.getClientId());
         formParams.put("client_secret", apiAccessTokenConfiguration.getClientSecret());
         formParams.put("jwt_token", jwtToken);
         return formParams;
+    }
+
+    /**
+     * Factory method for RSA {@link KeyFactory}. Extracted for testability.
+     */
+    protected KeyFactory getKeyFactory() throws NoSuchAlgorithmException {
+        return KeyFactory.getInstance("RSA");
     }
 
     @Data
@@ -195,6 +267,9 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         private String accessToken;
         @JsonProperty("token_type")
         private String tokenType;
+        /**
+         * Token lifetime in seconds as returned by IMS.
+         */
         @JsonProperty("expires_in")
         private long expiresIn;
     }

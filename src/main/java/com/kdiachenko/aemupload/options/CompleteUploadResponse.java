@@ -5,6 +5,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Response returned when a direct binary upload is completed.
+ *
+ * <p>Contains file identification details as returned by AEM.</p>
+ */
 @Data
 @Builder
 @NoArgsConstructor

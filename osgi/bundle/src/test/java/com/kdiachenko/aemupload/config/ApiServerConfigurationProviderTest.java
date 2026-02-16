@@ -1,53 +1,26 @@
 package com.kdiachenko.aemupload.config;
 
-import io.wcm.testing.mock.aem.junit5.AemContextExtension;
-import org.apache.sling.testing.mock.osgi.context.OsgiContextImpl;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-@ExtendWith(AemContextExtension.class)
 class ApiServerConfigurationProviderTest {
 
-    private final OsgiContextImpl osgiContext = new OsgiContextImpl();
-
     @Test
-    void testNotInitializedApiServerConfiguration() {
-        ApiServerConfiguration apiServerConfiguration = osgiContext.getService(ApiServerConfiguration.class);
+    void activate_shouldPopulateConfiguration() {
+        ApiServerConfigurationProvider provider = new ApiServerConfigurationProvider();
+        ApiServerConfigurationProvider.Config config = mock(ApiServerConfigurationProvider.Config.class);
 
-        assertNull(apiServerConfiguration);
-    }
+        when(config.serverSchema()).thenReturn("https");
+        when(config.serverHost()).thenReturn("example.com");
+        when(config.serverPort()).thenReturn("4502");
 
-    @Test
-    void testApiServerConfigurationInitializationWithCustomConfiguration() {
-        osgiContext.registerInjectActivateService(ApiServerConfigurationProvider.class, Map.of(
-                "serverSchema", "https",
-                "serverHost", "my.aem.host",
-                "serverPort", ""
-        ));
+        provider.activate(config);
 
-        ApiServerConfiguration configuration = osgiContext.getService(ApiServerConfiguration.class);
-
-        assertNotNull(configuration);
-        assertEquals("https", configuration.getSchema());
-        assertEquals("my.aem.host", configuration.getHost());
-        assertEquals("", configuration.getPort());
-    }
-
-    @Test
-    void testApiServerConfigurationInitializationWithDefaultConfiguration() {
-        osgiContext.registerInjectActivateService(ApiServerConfigurationProvider.class);
-
-        ApiServerConfiguration configuration = osgiContext.getService(ApiServerConfiguration.class);
-
-        assertNotNull(configuration);
-        assertEquals("https", configuration.getSchema());
-        assertEquals("localhost", configuration.getHost());
-        assertEquals("4502", configuration.getPort());
+        assertEquals("https", provider.getSchema());
+        assertEquals("example.com", provider.getHost());
+        assertEquals("4502", provider.getPort());
     }
 }

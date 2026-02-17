@@ -74,20 +74,6 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
     }
 
     /**
-     * Creates a provider with custom dependencies (for testing).
-     *
-     * @param apiAccessTokenConfiguration the token configuration
-     * @param httpClient                  the HTTP client
-     * @param responseHandlerFactory      the response handler
-     */
-    public ServiceCredentialsApiAccessTokenProvider(
-            ApiAccessTokenConfiguration apiAccessTokenConfiguration,
-            CloseableHttpClient httpClient,
-            HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory) {
-        this(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, Clock.systemClock(), new InMemoryTokenCache());
-    }
-
-    /**
      * Creates a provider with all dependencies injected (for testing).
      *
      * @param apiAccessTokenConfiguration the token configuration
@@ -142,6 +128,26 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
         log.info("Access token has been received. Expires in: {}", accessToken.expiresIn);
         tokenCache.put(accessToken.getAccessToken(), Duration.ofSeconds(accessToken.getExpiresIn()));
         return accessToken.getAccessToken();
+    }
+
+    private AccessTokenWrapper getAccessToken(final String jwtToken) {
+        try {
+            HttpPut httpPut = new HttpPut(apiAccessTokenConfiguration.getImsEndpoint());
+            httpPut.addHeader(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString());
+            List<NameValuePair> params = getFormParams(jwtToken).entrySet().stream()
+                    .map(entry -> new BasicNameValuePair(entry.getKey(), String.valueOf(entry.getValue())))
+                    .collect(Collectors.toList());
+            httpPut.setEntity(new UrlEncodedFormEntity(params));
+
+            ApiHttpResponse<AccessTokenWrapper> response = httpClient.execute(httpPut, responseHandlerFactory);
+
+            return response.getStatus() < HttpStatus.SC_REDIRECTION && response.getBody() != null
+                    ? response.getBody()
+                    : null;
+        } catch (IOException e) {
+            log.error("Error while getting access token", e);
+            return null;
+        }
     }
 
     private String getJWTToken() {
@@ -213,26 +219,6 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             log.error("Error while reading private key", e);
         }
         return null;
-    }
-
-    private AccessTokenWrapper getAccessToken(final String jwtToken) {
-        try {
-            HttpPut httpPut = new HttpPut(apiAccessTokenConfiguration.getImsEndpoint());
-            httpPut.addHeader(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString());
-            List<NameValuePair> params = getFormParams(jwtToken).entrySet().stream()
-                    .map(entry -> new BasicNameValuePair(entry.getKey(), String.valueOf(entry.getValue())))
-                    .collect(Collectors.toList());
-            httpPut.setEntity(new UrlEncodedFormEntity(params));
-
-            ApiHttpResponse<AccessTokenWrapper> response = httpClient.execute(httpPut, responseHandlerFactory);
-
-            return response.getStatus() < HttpStatus.SC_REDIRECTION && response.getBody() != null
-                    ? response.getBody()
-                    : null;
-        } catch (IOException e) {
-            log.error("Error while getting access token", e);
-            return null;
-        }
     }
 
     private String getPrivateKeyContentFromFile() throws IOException {

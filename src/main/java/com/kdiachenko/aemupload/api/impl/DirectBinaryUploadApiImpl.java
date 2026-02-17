@@ -7,7 +7,6 @@ import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.http.entity.HttpContexts;
-import com.kdiachenko.aemupload.utils.FileSplitter;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.options.CompleteBinaryUploadOptions;
 import com.kdiachenko.aemupload.options.CompleteUploadResponse;
@@ -15,6 +14,7 @@ import com.kdiachenko.aemupload.options.InitiateBinaryUploadOptions;
 import com.kdiachenko.aemupload.options.InitiateUploadResponse;
 import com.kdiachenko.aemupload.options.UploadBinaryOptions;
 import com.kdiachenko.aemupload.options.UploadBinaryResponse;
+import com.kdiachenko.aemupload.utils.FileSplitter;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -50,8 +50,8 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
                     .body(toInitiateUploadFormData(request))
                     .headers(Map.of(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString()))
                     .build();
-            ApiHttpResponse<InitiateUploadResponse> responseEntity =
-                    apiHttpClient.post(initiateUploadUrl, httpEntity, HttpContexts.AUTHORIZED, InitiateUploadResponse.class);
+            ApiHttpResponse<InitiateUploadResponse> responseEntity = apiHttpClient.post(
+                    initiateUploadUrl, httpEntity, HttpContexts.AUTHORIZED, InitiateUploadResponse.class);
 
             return AssetApiResponse.map(responseEntity);
         } catch (Exception e) {
@@ -69,7 +69,8 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
             parts = fileSplitter.splitFile(request.getBinary(), maxPartSize);
             if (request.getUploadURIs().size() < parts.size()) {
                 return AssetApiResponse.fail(SdkError.apiError(
-                        "uploadURIs size (" + request.getUploadURIs().size() + ") does not match parts count (" + parts.size() + ")", 400));
+                        "uploadURIs size (" + request.getUploadURIs().size() + ") does not match parts count ("
+                                + parts.size() + ")", 400));
             }
 
             for (int i = 0; i < parts.size(); i++) {
@@ -121,7 +122,8 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
         }
     }
 
-    private ApiHttpResponse<Void> uploadPart(final URI uploadUrl, final String contentType, final InputStream partInputStream) {
+    private ApiHttpResponse<Void> uploadPart(final URI uploadUrl, final String contentType,
+                                             final InputStream partInputStream) {
         var decodedUri = decodeUploadBinaryPartUri(uploadUrl);
         var httpEntity = ApiHttpEntity.builder()
                 .body(partInputStream)

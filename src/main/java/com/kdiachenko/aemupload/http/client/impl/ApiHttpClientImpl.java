@@ -1,13 +1,13 @@
 package com.kdiachenko.aemupload.http.client.impl;
 
-import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.exception.SerializationException;
-import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
-import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
+import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
+import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.entity.ApiHttpContext;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
+import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -46,7 +46,8 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     }
 
     @Override
-    public <T> ApiHttpResponse<T> get(final String url, final ApiHttpContext apiHttpContext, final Class<T> responseType) {
+    public <T> ApiHttpResponse<T> get(final String url, final ApiHttpContext apiHttpContext,
+                                      final Class<T> responseType) {
         var request = new HttpGet(url);
         return executeRequest(request, apiHttpContext, responseType);
     }

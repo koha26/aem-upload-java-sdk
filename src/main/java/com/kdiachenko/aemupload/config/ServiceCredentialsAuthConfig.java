@@ -1,8 +1,8 @@
 package com.kdiachenko.aemupload.config;
 
 import lombok.Builder;
-import lombok.Value;
 import lombok.ToString;
+import lombok.Value;
 
 import java.util.List;
 
@@ -119,8 +119,8 @@ public class ServiceCredentialsAuthConfig implements AuthConfig, ApiAccessTokenC
             if (orgId == null || orgId.isBlank()) {
                 throw new IllegalStateException("orgId must not be null or blank");
             }
-            if ((privateKeyContent == null || privateKeyContent.isBlank()) &&
-                    (privateKeyFilePath == null || privateKeyFilePath.isBlank())) {
+            if ((privateKeyContent == null || privateKeyContent.isBlank())
+                    && (privateKeyFilePath == null || privateKeyFilePath.isBlank())) {
                 throw new IllegalStateException("either privateKeyContent or privateKeyFilePath must be provided");
             }
             if (metaScopes == null || metaScopes.isEmpty()) {

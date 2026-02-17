@@ -2,14 +2,14 @@ package com.kdiachenko.aemupload.api.impl;
 
 import com.kdiachenko.aemupload.api.AssetFolderApi;
 import com.kdiachenko.aemupload.config.ApiServerConfiguration;
+import com.kdiachenko.aemupload.exception.SdkError;
 import com.kdiachenko.aemupload.http.client.ApiHttpClient;
 import com.kdiachenko.aemupload.http.entity.ApiHttpEntity;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.http.entity.HttpContexts;
-import com.kdiachenko.aemupload.utils.PathNormalizer;
 import com.kdiachenko.aemupload.model.AssetApiResponse;
 import com.kdiachenko.aemupload.model.AssetElement;
-import com.kdiachenko.aemupload.exception.SdkError;
+import com.kdiachenko.aemupload.utils.PathNormalizer;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;

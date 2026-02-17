@@ -1,8 +1,8 @@
 package com.kdiachenko.aemupload.api;
 
 import com.kdiachenko.aemupload.api.builder.BaseApiBuilder;
-import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.api.impl.AssetFolderApiImpl;
+import com.kdiachenko.aemupload.config.ApiServerConfiguration;
 import com.kdiachenko.aemupload.utils.PathNormalizer;
 import com.kdiachenko.aemupload.utils.impl.PathNormalizerImpl;
 

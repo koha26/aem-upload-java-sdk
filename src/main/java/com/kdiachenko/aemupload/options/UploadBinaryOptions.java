@@ -50,8 +50,8 @@ public class UploadBinaryOptions {
     public static class UploadBinaryOptionsBuilder {
         private List<URI> uploadURIs = new ArrayList<>();
 
-        public UploadBinaryOptionsBuilder uploadURIs(List<URI> uploadURIs) {
-            this.uploadURIs = uploadURIs != null ? new ArrayList<>(uploadURIs) : new ArrayList<>();
+        public UploadBinaryOptionsBuilder uploadURIs(List<URI> uploadUris) {
+            this.uploadURIs = uploadUris != null ? new ArrayList<>(uploadUris) : new ArrayList<>();
             return this;
         }
 

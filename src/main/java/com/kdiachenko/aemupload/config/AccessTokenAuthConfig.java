@@ -47,8 +47,12 @@ public final class AccessTokenAuthConfig implements AuthConfig {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         AccessTokenAuthConfig that = (AccessTokenAuthConfig) o;
         return Objects.equals(accessToken, that.accessToken);
     }

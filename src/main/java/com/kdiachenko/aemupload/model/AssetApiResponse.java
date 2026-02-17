@@ -75,6 +75,20 @@ public class AssetApiResponse<T> {
 
 
     /**
+     * Transforms the body using the given function if successful.
+     *
+     * @param mapper the transformation function
+     * @param <R>    the type of the transformed result
+     * @return a new AssetApiResponse with the transformed body, or the same error
+     */
+    public <R> AssetApiResponse<R> map(Function<T, R> mapper) {
+        if (success) {
+            return AssetApiResponse.success(mapper.apply(body));
+        }
+        return new AssetApiResponse<>(false, null, error);
+    }
+
+    /**
      * Returns whether this response represents a failed operation.
      *
      * @return true if failed, false otherwise
@@ -113,20 +127,6 @@ public class AssetApiResponse<T> {
      */
     public T getOrElse(T defaultValue) {
         return success ? body : defaultValue;
-    }
-
-    /**
-     * Transforms the body using the given function if successful.
-     *
-     * @param mapper the transformation function
-     * @param <R>    the type of the transformed result
-     * @return a new AssetApiResponse with the transformed body, or the same error
-     */
-    public <R> AssetApiResponse<R> map(Function<T, R> mapper) {
-        if (success) {
-            return AssetApiResponse.success(mapper.apply(body));
-        }
-        return new AssetApiResponse<>(false, null, error);
     }
 
     /**

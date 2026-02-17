@@ -25,6 +25,7 @@ public class DefaultAuthorizationProviderFactory implements AuthorizationProvide
             BasicAuthConfig basicAuth = (BasicAuthConfig) authConfig;
             return new BasicAuthorizationProvider(basicAuth.getUsername(), basicAuth.getPassword());
         }
-        throw new IllegalArgumentException("Unsupported authentication configuration: " + authConfig.getClass().getName());
+        throw new IllegalArgumentException("Unsupported authentication configuration: "
+                + authConfig.getClass().getName());
     }
 }

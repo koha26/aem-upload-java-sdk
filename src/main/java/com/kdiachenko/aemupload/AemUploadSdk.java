@@ -20,12 +20,12 @@ import com.kdiachenko.aemupload.exception.SdkException;
 import com.kdiachenko.aemupload.http.HttpClient5BuilderConfigurator;
 import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
 import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
-import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
-import com.kdiachenko.aemupload.utils.impl.FileSplitterImpl;
-import com.kdiachenko.aemupload.utils.impl.PathNormalizerImpl;
+import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import com.kdiachenko.aemupload.utils.FileSplitter;
 import com.kdiachenko.aemupload.utils.PathNormalizer;
+import com.kdiachenko.aemupload.utils.impl.FileSplitterImpl;
+import com.kdiachenko.aemupload.utils.impl.PathNormalizerImpl;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -388,7 +388,8 @@ public final class AemUploadSdk implements Closeable {
                 apiHttpClientObjectMapper = DEFAULT_HTTP_CLIENT_SERIALIZER;
             }
             if (apiHttpClientResponseHandlerFactory == null) {
-                apiHttpClientResponseHandlerFactory = ApiHttpClientResponseHandlerFactory.create(apiHttpClientObjectMapper);
+                apiHttpClientResponseHandlerFactory =
+                        ApiHttpClientResponseHandlerFactory.create(apiHttpClientObjectMapper);
             }
 
             // Create HTTP client with auth if not provided
@@ -405,7 +406,8 @@ public final class AemUploadSdk implements Closeable {
                 throw new SdkException("serverUrl or serverConfig must be set");
             }
             if (authConfig == null) {
-                throw new SdkException("authentication must be configured (use withAccessToken, withBasicAuth, or withServiceCredentials)");
+                throw new SdkException("authentication must be configured "
+                        + "(use withAccessToken, withBasicAuth, or withServiceCredentials)");
             }
             if (authorizationProviderFactory == null) {
                 throw new SdkException("authorizationProviderFactory must not be null");

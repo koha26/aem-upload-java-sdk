@@ -2,7 +2,6 @@ package com.kdiachenko.aemupload.http.client;
 
 import com.kdiachenko.aemupload.http.client.impl.ApiHttpClientImpl;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
-import com.kdiachenko.aemupload.http.client.JacksonHttpClientObjectMapper;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 
 /**

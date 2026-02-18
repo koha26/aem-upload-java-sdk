@@ -1,15 +1,53 @@
 # AEM Upload SDK - OSGi Bundle
 
+[![Build Status](https://github.com/koha26/aem-upload-java-sdk/actions/workflows/build.yml/badge.svg)](https://github.com/koha26/aem-upload-java-sdk/actions/workflows/build.yml)
+[![Coverage](https://codecov.io/gh/koha26/aem-upload-java-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/koha26/aem-upload-java-sdk)
+[![Maven Central](https://img.shields.io/maven-central/v/com.kdiachenko/aem-upload-java-sdk-osgi.bundle.svg)](https://search.maven.org/artifact/com.kdiachenko/aem-upload-java-sdk-osgi.bundle)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](../LICENSE)
+[![Java Version](https://img.shields.io/badge/Java-11%2B-orange.svg)](https://www.oracle.com/java/technologies/downloads/)
+
 OSGi wrapper for the AEM Upload Java SDK, enabling use in AEM/OSGi environments.
 
-## Modules
+## 💡 Idea
 
-- **bundle**: OSGi bundle containing SDK adapters and services
-- **package**: AEM content package for deploying the bundle
+This module provides an OSGi-ready wrapper for the AEM Upload SDK, allowing seamless integration with:
+- **AEM as a Cloud Service**: Deploy as a content package
+- **On-premise AEM 6.5+**: Use as an embedded bundle
+- **OSGi Configuration**: Configure via Felix Console or `.cfg.json` files
+- **Service Injection**: Use `@Reference` annotation for dependency injection
+
+## Quick start
+
+```java
+import com.kdiachenko.aemupload.provider.AemUploadSdkService;
+
+@Component(service = MyAssetUploader.class)
+public class MyAssetUploader {
+
+    @Reference
+    private AemUploadSdkService sdkService;
+
+    public void uploadAsset(String folderPath, String fileName, long fileSize) {
+        sdkService.directBinaryUploadApi()
+            .initiateUpload(InitiateBinaryUploadOptions.builder()
+                .damAssetFolder(folderPath)
+                .fileName(fileName)
+                .fileSize(fileSize)
+                .build())
+            .ifSuccess(data -> System.out.println("Upload initiated: " + data.getUploadToken()))
+            .ifFailure(error -> System.err.println("Failed: " + error.getMessage()));
+    }
+}
+```
+
+## Supported Java version
+
+- **Java 11** or higher is required
+- Compatible with AEM 6.5+ and AEM as a Cloud Service
 
 ## Installation
 
-### Maven Dependency
+### Maven dependency
 
 Add to your AEM project's `pom.xml`:
 
@@ -30,68 +68,13 @@ cd osgi
 mvn clean install -PautoInstallSinglePackage
 ```
 
-## Configuration
+With custom AEM instance:
 
-Configure the SDK via OSGi configuration in the Felix Console or via `.cfg.json` files.
-
-### Configuration Options
-
-| Property | Description | Default |
-|----------|-------------|---------|
-| `serverUrl` | AEM server URL | `http://localhost:4502` |
-| `authType` | Authentication type: `accessToken`, `basic`, or `serviceCredentials` | `basic` |
-| `accessToken` | Static access token (for development) | - |
-| `username` | Username for basic auth | `admin` |
-| `password` | Password for basic auth | `admin` |
-| `clientId` | Adobe I/O client ID (for service credentials) | - |
-| `clientSecret` | Adobe I/O client secret | - |
-| `technicalAccountId` | Technical account ID | - |
-| `orgId` | Adobe organization ID | - |
-| `privateKeyContent` | PEM private key content | - |
-| `privateKeyPath` | Path to private key file | - |
-| `metaScopes` | Meta scopes array | `["ent_aem_cloud_api"]` |
-| `imsEndpoint` | IMS endpoint URL | `https://ims-na1.adobelogin.com/ims/exchange/jwt` |
-
-### Example Configuration Files
-
-#### Basic Auth (Local Development)
-
-`com.kdiachenko.aemupload.provider.impl.AemUploadSdkServiceImpl.cfg.json`:
-```json
-{
-    "serverUrl": "http://localhost:4502",
-    "authType": "basic",
-    "username": "admin",
-    "password": "admin"
-}
+```bash
+mvn clean install -PautoInstallSinglePackage -Daem.host=localhost -Daem.port=4502
 ```
 
-#### Access Token (Development)
-
-```json
-{
-    "serverUrl": "https://author-pXXXXX-eYYYYY.adobeaemcloud.com",
-    "authType": "accessToken",
-    "accessToken": "eyJ0eXAiOiJKV1Q..."
-}
-```
-
-#### Service Credentials (Production)
-
-```json
-{
-    "serverUrl": "https://author-pXXXXX-eYYYYY.adobeaemcloud.com",
-    "authType": "serviceCredentials",
-    "clientId": "your-client-id",
-    "clientSecret": "your-client-secret",
-    "technicalAccountId": "your-tech-account@techacct.adobe.com",
-    "orgId": "XXXXXXXXXXXXXXXX@AdobeOrg",
-    "privateKeyPath": "/etc/keys/private.key",
-    "metaScopes": ["ent_aem_cloud_api"]
-}
-```
-
-## Usage
+## Example Usage
 
 ### Inject the Service
 
@@ -136,7 +119,7 @@ public class MyAssetUploader {
 }
 ```
 
-### Using Sling Models
+### Using Sling models
 
 ```java
 import com.kdiachenko.aemupload.provider.AemUploadSdkService;
@@ -156,7 +139,73 @@ public class AssetUploadModel {
 }
 ```
 
-## Backward Compatibility
+## Configuration
+
+Configure the SDK via OSGi configuration in the Felix Console or via `.cfg.json` files.
+
+### Configuration options
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `serverUrl` | AEM server URL | `http://localhost:4502` |
+| `authType` | Authentication type: `accessToken`, `basic`, or `serviceCredentials` | `basic` |
+| `accessToken` | Static access token (for development) | - |
+| `username` | Username for basic auth | `admin` |
+| `password` | Password for basic auth | `admin` |
+| `clientId` | Adobe I/O client ID (for service credentials) | - |
+| `clientSecret` | Adobe I/O client secret | - |
+| `technicalAccountId` | Technical account ID | - |
+| `orgId` | Adobe organization ID | - |
+| `privateKeyContent` | PEM private key content | - |
+| `privateKeyPath` | Path to private key file | - |
+| `metaScopes` | Meta scopes array | `["ent_aem_cloud_api"]` |
+| `imsEndpoint` | IMS endpoint URL | `https://ims-na1.adobelogin.com/ims/exchange/jwt` |
+
+### Example configuration files
+
+#### Basic auth (local development)
+
+`com.kdiachenko.aemupload.provider.impl.AemUploadSdkServiceImpl.cfg.json`:
+```json
+{
+    "serverUrl": "http://localhost:4502",
+    "authType": "basic",
+    "username": "admin",
+    "password": "admin"
+}
+```
+
+#### Access token (development)
+
+```json
+{
+    "serverUrl": "https://author-pXXXXX-eYYYYY.adobeaemcloud.com",
+    "authType": "accessToken",
+    "accessToken": "eyJ0eXAiOiJKV1Q..."
+}
+```
+
+#### Service credentials (production)
+
+```json
+{
+    "serverUrl": "https://author-pXXXXX-eYYYYY.adobeaemcloud.com",
+    "authType": "serviceCredentials",
+    "clientId": "your-client-id",
+    "clientSecret": "your-client-secret",
+    "technicalAccountId": "your-tech-account@techacct.adobe.com",
+    "orgId": "XXXXXXXXXXXXXXXX@AdobeOrg",
+    "privateKeyPath": "/etc/keys/private.key",
+    "metaScopes": ["ent_aem_cloud_api"]
+}
+```
+
+## Modules
+
+- **bundle**: OSGi bundle containing SDK adapters and services
+- **package**: AEM content package for deploying the bundle
+
+## Backward compatibility
 
 The bundle also exports the legacy `SdkApiProvider` interface for backward compatibility:
 
@@ -185,30 +234,10 @@ mvn clean install -PautoInstallSinglePackage
 mvn clean install -PautoInstallSinglePackage -Daem.host=localhost -Daem.port=4502
 ```
 
+## Contributing
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines on how to contribute to this project.
+
 ## License
 
-See [LICENSE](../LICENSE) for details.
-
-### UI tests
-
-They will test the UI layer of your AEM application using either Cypress or Selenium technology.
-
-Check README file in `ui.tests.cypress` or `ui.tests.wdio` module for more details.
-
-## ClientLibs
-
-The frontend module is made available using an [AEM ClientLib](https://helpx.adobe.com/experience-manager/6-5/sites/developing/using/clientlibs.html). When executing the NPM build script, the app is built and the [`aem-clientlib-generator`](https://github.com/wcm-io-frontend/aem-clientlib-generator) package takes the resulting build output and transforms it into such a ClientLib.
-
-A ClientLib will consist of the following files and directories:
-
-- `css/`: CSS files which can be requested in the HTML
-- `css.txt` (tells AEM the order and names of files in `css/` so they can be merged)
-- `js/`: JavaScript files which can be requested in the HTML
-- `js.txt` (tells AEM the order and names of files in `js/` so they can be merged
-- `resources/`: Source maps, non-entrypoint code chunks (resulting from code splitting), static assets (e.g. icons), etc.
-
-## Maven settings
-
-The project comes with the auto-public repository configured. To setup the repository in your Maven settings, refer to:
-
-    http://helpx.adobe.com/experience-manager/kb/SetUpTheAdobeMavenRepository.html
+This project is licensed under the Apache License 2.0 - see the [LICENSE](../LICENSE) file for details.

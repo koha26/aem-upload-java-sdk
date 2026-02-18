@@ -53,6 +53,17 @@ class AuthorizationProvidersTest {
     }
 
     @Test
+    void bearerTokenAuthorizationProvider_shouldRejectNullToken() {
+        ApiAccessTokenProvider tokenProvider = () -> null;
+        ApiAuthorizationProvider provider = new BearerTokenAuthorizationProvider(tokenProvider);
+        HttpRequest request = new BasicHttpRequest("GET", "/");
+
+        assertThatThrownBy(() -> provider.applyAuthorization(request, new BasicHttpContext()))
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessageContaining("Access token is null or empty");
+    }
+
+    @Test
     void defaultAuthorizationProviderFactory_shouldCreateProviders() {
         DefaultAuthorizationProviderFactory factory = new DefaultAuthorizationProviderFactory();
 

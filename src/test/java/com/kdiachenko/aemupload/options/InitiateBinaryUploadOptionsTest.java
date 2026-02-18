@@ -56,6 +56,25 @@ class InitiateBinaryUploadOptionsTest {
     }
 
     @Test
+    void builder_shouldRejectBlankFolderAndFileName() {
+        assertThatThrownBy(() -> InitiateBinaryUploadOptions.builder()
+                .damAssetFolder(" ")
+                .fileName("test.jpg")
+                .fileSize(1L)
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("damAssetFolder");
+
+        assertThatThrownBy(() -> InitiateBinaryUploadOptions.builder()
+                .damAssetFolder("/content/dam")
+                .fileName(" ")
+                .fileSize(1L)
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("fileName");
+    }
+
+    @Test
     void toBuilder_shouldAllowModification() {
         // Given
         InitiateBinaryUploadOptions original = InitiateBinaryUploadOptions.builder()

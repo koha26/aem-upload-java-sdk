@@ -25,7 +25,6 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,12 +46,6 @@ class AssetFolderApiImplTest {
     private PathNormalizer pathNormalizer;
 
     @Mock
-    private ApiHttpResponse<AssetElement> assetElementResponse;
-
-    @Mock
-    private ApiHttpResponse<Void> voidResponse;
-
-    @Mock
     private AssetElement assetElement;
 
     @Captor
@@ -65,19 +58,6 @@ class AssetFolderApiImplTest {
         when(apiServerConfiguration.getHostUrl()).thenReturn(HOST_URL);
         when(pathNormalizer.normalize(FOLDER_PATH)).thenReturn(NORMALIZED_FOLDER_PATH);
 
-        // Setup default behavior for mock responses
-        when(assetElementResponse.isSuccess()).thenReturn(true);
-        when(assetElementResponse.getBody()).thenReturn(assetElement);
-        when(assetElementResponse.getErrorMessage()).thenReturn(null);
-
-        when(voidResponse.isSuccess()).thenReturn(true);
-        when(voidResponse.getBody()).thenReturn(null);
-        when(voidResponse.getErrorMessage()).thenReturn(null);
-
-        // Setup default behavior for apiHttpClient
-        doReturn(assetElementResponse).when(apiHttpClient).get(any(), any(), any());
-        doReturn(voidResponse).when(apiHttpClient).post(any(), any(), any(), any());
-
         assetFolderApi = new AssetFolderApiImpl(apiHttpClient, apiServerConfiguration, pathNormalizer);
     }
 
@@ -85,10 +65,12 @@ class AssetFolderApiImplTest {
     @DisplayName("getFolder should make GET request and return mapped response")
     void getFolder_shouldMakeGetRequestAndReturnMappedResponse() {
         // Arrange
+        ApiHttpResponse<AssetElement> assetElementResponse = ApiHttpResponse.<AssetElement>builder()
+                .status(200)
+                .body(assetElement)
+                .build();
         when(apiHttpClient.get(eq(HOST_URL + NORMALIZED_FOLDER_PATH), eq(HttpContexts.AUTHORIZED), eq(AssetElement.class)))
                 .thenReturn(assetElementResponse);
-        when(assetElementResponse.isSuccess()).thenReturn(true);
-        when(assetElementResponse.getBody()).thenReturn(assetElement);
 
         // Act
         AssetApiResponse<AssetElement> response = assetFolderApi.getFolder(FOLDER_PATH);
@@ -103,9 +85,9 @@ class AssetFolderApiImplTest {
     @DisplayName("createFolder should make POST request with default properties and return mapped response")
     void createFolder_shouldMakePostRequestWithDefaultPropertiesAndReturnMappedResponse() {
         // Arrange
+        ApiHttpResponse<Void> voidResponse = ApiHttpResponse.<Void>builder().status(200).build();
         when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
-        when(voidResponse.isSuccess()).thenReturn(true);
 
         // Act
         AssetApiResponse<Void> response = assetFolderApi.createFolder(FOLDER_PATH);
@@ -125,9 +107,9 @@ class AssetFolderApiImplTest {
     void createFolderWithProperties_shouldMakePostRequestWithCustomPropertiesAndReturnMappedResponse() {
         // Arrange
         Map<String, String> customProperties = Map.of("title", "Custom Title", "description", "Custom Description");
+        ApiHttpResponse<Void> voidResponse = ApiHttpResponse.<Void>builder().status(200).build();
         when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
-        when(voidResponse.isSuccess()).thenReturn(true);
 
         // Act
         AssetApiResponse<Void> response = assetFolderApi.createFolder(FOLDER_PATH, customProperties);
@@ -146,10 +128,12 @@ class AssetFolderApiImplTest {
     @DisplayName("getFolder should handle error response")
     void getFolder_shouldHandleErrorResponse() {
         // Arrange
+        ApiHttpResponse<AssetElement> assetElementResponse = ApiHttpResponse.<AssetElement>builder()
+                .status(500)
+                .errorMessage("Error message")
+                .build();
         when(apiHttpClient.get(eq(HOST_URL + NORMALIZED_FOLDER_PATH), eq(HttpContexts.AUTHORIZED), eq(AssetElement.class)))
                 .thenReturn(assetElementResponse);
-        when(assetElementResponse.isSuccess()).thenReturn(false);
-        when(assetElementResponse.getErrorMessage()).thenReturn("Error message");
 
         // Act
         AssetApiResponse<AssetElement> response = assetFolderApi.getFolder(FOLDER_PATH);
@@ -166,10 +150,12 @@ class AssetFolderApiImplTest {
     @DisplayName("createFolder should handle error response")
     void createFolder_shouldHandleErrorResponse() {
         // Arrange
+        ApiHttpResponse<Void> voidResponse = ApiHttpResponse.<Void>builder()
+                .status(500)
+                .errorMessage("Error message")
+                .build();
         when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_FOLDER_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
-        when(voidResponse.isSuccess()).thenReturn(false);
-        when(voidResponse.getErrorMessage()).thenReturn("Error message");
 
         // Act
         AssetApiResponse<Void> response = assetFolderApi.createFolder(FOLDER_PATH);
@@ -204,5 +190,48 @@ class AssetFolderApiImplTest {
                 .get()
                 .extracting(SdkError::getMessage)
                 .isEqualTo("properties must not be null");
+    }
+
+    @Test
+    @DisplayName("createFolder should validate blank folder")
+    void createFolder_shouldValidateBlankFolder() {
+        AssetApiResponse<Void> response = assetFolderApi.createFolder(" ");
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getHttpStatus)
+                .isEqualTo(400);
+    }
+
+    @Test
+    @DisplayName("createFolder with properties should validate blank folder")
+    void createFolderWithProperties_shouldValidateBlankFolder() {
+        AssetApiResponse<Void> response = assetFolderApi.createFolder(" ", Map.of("title", "x"));
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getHttpStatus)
+                .isEqualTo(400);
+    }
+
+    @Test
+    @DisplayName("createFolder should use full folder name when no slash exists")
+    void createFolder_shouldUseFolderAsTitleWhenNoSlash() {
+        String simpleFolder = "folder";
+        ApiHttpResponse<Void> voidResponse = ApiHttpResponse.<Void>builder().status(200).build();
+        when(pathNormalizer.normalize(simpleFolder)).thenReturn("/" + simpleFolder);
+        when(apiHttpClient.post(eq(HOST_URL + "/" + simpleFolder), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
+                .thenReturn(voidResponse);
+
+        AssetApiResponse<Void> response = assetFolderApi.createFolder(simpleFolder);
+
+        assertThat(response.isSuccess()).isTrue();
+        verify(apiHttpClient).post(eq(HOST_URL + "/" + simpleFolder), httpEntityCaptor.capture(),
+                eq(HttpContexts.AUTHORIZED), eq(Void.class));
+        Map<String, Object> formData = (Map<String, Object>) httpEntityCaptor.getValue().getBody();
+        Map<String, String> properties = (Map<String, String>) formData.get("properties");
+        assertThat(properties).containsEntry("title", simpleFolder);
     }
 }

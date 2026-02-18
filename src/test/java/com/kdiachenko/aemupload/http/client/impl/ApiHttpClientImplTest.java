@@ -80,6 +80,18 @@ class ApiHttpClientImplTest {
     }
 
     @Test
+    void get_shouldHandleIOExceptionWithoutCauseMessage() throws IOException {
+        var url = "https://api.host/v1/api/call";
+        doThrow(new IOException()).when(httpClient).execute(any(HttpGet.class), any(), any());
+
+        var result = apiHttpClient.get(url, null, String.class);
+
+        assertThat(result.getStatus()).isEqualTo(500);
+        assertThat(result.getErrorMessage()).contains("Error while executing request: GET /v1/api/call");
+        assertThat(result.getErrorMessage()).doesNotContain("Cause:");
+    }
+
+    @Test
     void get_shouldPopulateHttpClientContext() throws IOException {
         var url = "https://api.host/v1/api/call";
         var response = ApiHttpResponse.<String>builder().status(200).body("ok").build();
@@ -188,6 +200,18 @@ class ApiHttpClientImplTest {
         HttpEntity requestEntity = request.getEntity();
         assertThat(request.getFirstHeader(HttpHeaders.CONTENT_TYPE)).isNull();
         assertThat(requestEntity.getContentType()).isEqualTo("application/octet-stream");
+    }
+
+    @Test
+    void post_shouldHandleNullHeadersForInputStreamEntity() {
+        var url = "https://api.host/v1/api/call";
+        InputStream stream = new ByteArrayInputStream("data".getBytes(StandardCharsets.UTF_8));
+        var entity = new ApiHttpEntity<InputStream>(stream, null);
+
+        var result = apiHttpClient.post(url, entity, null, String.class);
+
+        assertThat(result.getStatus()).isEqualTo(500);
+        assertThat(result.getErrorMessage()).contains("Unexpected error while executing request");
     }
 
     @Test

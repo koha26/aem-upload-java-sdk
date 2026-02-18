@@ -72,8 +72,21 @@ public class ApiHttpClientResponseHandler<T> extends AbstractHttpClientResponseH
 
     private ApiHttpResponse<T> handleEntityWithCode(final HttpEntity entity,
                                                     final ClassicHttpResponse response) throws IOException {
-        ApiHttpResponse<T> apiHttpResponse = handleEntity(entity);
-        apiHttpResponse.setStatus(response.getCode());
-        return apiHttpResponse;
+        try {
+            String responseBody = EntityUtils.toString(entity);
+            if (Void.class.equals(responseType)) {
+                return ApiHttpResponse.<T>builder()
+                        .status(response.getCode())
+                        .build();
+            }
+            T body = httpClientObjectMapper.deserialize(responseBody, responseType);
+            return ApiHttpResponse.<T>builder()
+                    .status(response.getCode())
+                    .body(body)
+                    .build();
+        } catch (final Exception ex) {
+            log.info("Error parsing response", ex);
+            throw new IOException(ex);
+        }
     }
 }

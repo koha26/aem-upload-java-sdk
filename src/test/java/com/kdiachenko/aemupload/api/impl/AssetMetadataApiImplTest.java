@@ -25,7 +25,6 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,12 +46,6 @@ class AssetMetadataApiImplTest {
     private PathNormalizer pathNormalizer;
 
     @Mock
-    private ApiHttpResponse<DamAsset> damAssetResponse;
-
-    @Mock
-    private ApiHttpResponse<Void> voidResponse;
-
-    @Mock
     private DamAsset damAsset;
 
     @Captor
@@ -65,20 +58,6 @@ class AssetMetadataApiImplTest {
         when(apiServerConfiguration.getHostUrl()).thenReturn(HOST_URL);
         when(pathNormalizer.normalize(ASSET_PATH)).thenReturn(NORMALIZED_ASSET_PATH);
 
-        // Setup default behavior for mock responses
-        when(damAssetResponse.isSuccess()).thenReturn(true);
-        when(damAssetResponse.getBody()).thenReturn(damAsset);
-        when(damAssetResponse.getErrorMessage()).thenReturn(null);
-
-        when(voidResponse.isSuccess()).thenReturn(true);
-        when(voidResponse.getBody()).thenReturn(null);
-        when(voidResponse.getErrorMessage()).thenReturn(null);
-
-        // Setup default behavior for apiHttpClient
-        doReturn(damAssetResponse).when(apiHttpClient).get(any(), any(), any());
-        doReturn(voidResponse).when(apiHttpClient).put(any(), any(), any(), any());
-        doReturn(voidResponse).when(apiHttpClient).post(any(), any(), any(), any());
-
         assetMetadataApi = new AssetMetadataApiImpl(apiHttpClient, apiServerConfiguration, pathNormalizer);
     }
 
@@ -87,6 +66,10 @@ class AssetMetadataApiImplTest {
     void getAssetMetadata_shouldMakeGetRequestAndReturnMappedResponse() {
         // Arrange
         String metadataUrl = HOST_URL + NORMALIZED_ASSET_PATH;
+        ApiHttpResponse<DamAsset> damAssetResponse = ApiHttpResponse.<DamAsset>builder()
+                .status(200)
+                .body(damAsset)
+                .build();
         when(apiHttpClient.get(eq(metadataUrl), eq(HttpContexts.AUTHORIZED), eq(DamAsset.class)))
                 .thenReturn(damAssetResponse);
 
@@ -104,6 +87,7 @@ class AssetMetadataApiImplTest {
     void updateAssetMetadata_shouldMakePutRequestAndReturnMappedResponse() {
         // Arrange
         Map<String, String> metadata = Map.of("dc:title", "New Title", "dc:description", "New Description");
+        ApiHttpResponse<Void> voidResponse = ApiHttpResponse.<Void>builder().status(200).build();
         when(apiHttpClient.put(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
 
@@ -124,6 +108,7 @@ class AssetMetadataApiImplTest {
     @DisplayName("deleteAsset should make POST request and return mapped response")
     void deleteAsset_shouldMakePostRequestAndReturnMappedResponse() {
         // Arrange
+        ApiHttpResponse<Void> voidResponse = ApiHttpResponse.<Void>builder().status(200).build();
         when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
 
@@ -143,10 +128,12 @@ class AssetMetadataApiImplTest {
     void getAssetMetadata_shouldHandleErrorResponse() {
         // Arrange
         String metadataUrl = HOST_URL + NORMALIZED_ASSET_PATH;
+        ApiHttpResponse<DamAsset> damAssetResponse = ApiHttpResponse.<DamAsset>builder()
+                .status(500)
+                .errorMessage("Error message")
+                .build();
         when(apiHttpClient.get(eq(metadataUrl), eq(HttpContexts.AUTHORIZED), eq(DamAsset.class)))
                 .thenReturn(damAssetResponse);
-        when(damAssetResponse.isSuccess()).thenReturn(false);
-        when(damAssetResponse.getErrorMessage()).thenReturn("Error message");
 
         // Act
         AssetApiResponse<DamAsset> response = assetMetadataApi.getAssetMetadata(ASSET_PATH);
@@ -164,10 +151,12 @@ class AssetMetadataApiImplTest {
     void updateAssetMetadata_shouldHandleErrorResponse() {
         // Arrange
         Map<String, String> metadata = Map.of("dc:title", "New Title");
+        ApiHttpResponse<Void> voidResponse = ApiHttpResponse.<Void>builder()
+                .status(500)
+                .errorMessage("Error message")
+                .build();
         when(apiHttpClient.put(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
-        when(voidResponse.isSuccess()).thenReturn(false);
-        when(voidResponse.getErrorMessage()).thenReturn("Error message");
 
         // Act
         AssetApiResponse<Void> response = assetMetadataApi.updateAssetMetadata(ASSET_PATH, metadata);
@@ -184,10 +173,12 @@ class AssetMetadataApiImplTest {
     @DisplayName("deleteAsset should handle error response")
     void deleteAsset_shouldHandleErrorResponse() {
         // Arrange
+        ApiHttpResponse<Void> voidResponse = ApiHttpResponse.<Void>builder()
+                .status(500)
+                .errorMessage("Error message")
+                .build();
         when(apiHttpClient.post(eq(HOST_URL + NORMALIZED_ASSET_PATH), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(Void.class)))
                 .thenReturn(voidResponse);
-        when(voidResponse.isSuccess()).thenReturn(false);
-        when(voidResponse.getErrorMessage()).thenReturn("Error message");
 
         // Act
         AssetApiResponse<Void> response = assetMetadataApi.deleteAsset(ASSET_PATH);
@@ -222,5 +213,29 @@ class AssetMetadataApiImplTest {
                 .get()
                 .extracting(SdkError::getMessage)
                 .isEqualTo("metadata must not be null");
+    }
+
+    @Test
+    @DisplayName("updateAssetMetadata should validate blank assetPath")
+    void updateAssetMetadata_shouldValidateBlankAssetPath() {
+        AssetApiResponse<Void> response = assetMetadataApi.updateAssetMetadata(" ", Map.of("k", "v"));
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getHttpStatus)
+                .isEqualTo(400);
+    }
+
+    @Test
+    @DisplayName("deleteAsset should validate blank assetPath")
+    void deleteAsset_shouldValidateBlankAssetPath() {
+        AssetApiResponse<Void> response = assetMetadataApi.deleteAsset(" ");
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getHttpStatus)
+                .isEqualTo(400);
     }
 }

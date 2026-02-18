@@ -12,15 +12,23 @@ import com.kdiachenko.aemupload.http.HttpClient5BuilderConfigurator;
 import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
 import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
+import com.kdiachenko.aemupload.utils.FileSplitter;
+import com.kdiachenko.aemupload.utils.PathNormalizer;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AemUploadSdkTest {
@@ -250,6 +258,79 @@ class AemUploadSdkTest {
                 .build()) {
 
             assertThat(sdk).isNotNull();
+        }
+    }
+
+    @Test
+    void builder_shouldAcceptServerConfigAuthConfigAndCustomUtilities() throws IOException {
+        CloseableHttpClient httpClient = Mockito.mock(CloseableHttpClient.class);
+        FileSplitter customFileSplitter = (path, maxChunkSize) -> List.of(path);
+        PathNormalizer customPathNormalizer = path -> path;
+
+        try (AemUploadSdk sdk = AemUploadSdk.builder()
+                .serverConfig(ServerConfig.fromUrl("https://example.com"))
+                .authConfig(AccessTokenAuthConfig.of("token"))
+                .httpClient(httpClient)
+                .fileSplitter(customFileSplitter)
+                .pathNormalizer(customPathNormalizer)
+                .build()) {
+            assertThat(sdk).isNotNull();
+        }
+    }
+
+    @Test
+    void close_shouldNotFailWhenOwnedClientIsNull() throws IOException {
+        HttpClient5BuilderConfigurator configurator = new HttpClient5BuilderConfigurator() {
+            @Override
+            public <T extends HttpClientBuilder> T configure(T clientBuilder) {
+                return (T) new HttpClientBuilder() {
+                    @Override
+                    public CloseableHttpClient build() {
+                        return null;
+                    }
+                };
+            }
+        };
+        AemUploadSdk sdk = AemUploadSdk.builder()
+                .serverUrl("https://example.com")
+                .withAccessToken("token")
+                .httpClientBuilderConfigurator(configurator)
+                .build();
+
+        assertThatCode(sdk::close).doesNotThrowAnyException();
+    }
+
+    @Test
+    void apis_shouldInitializeSafelyUnderConcurrency() throws Exception {
+        try (AemUploadSdk sdk = AemUploadSdk.builder()
+                .serverUrl("https://example.com")
+                .withAccessToken("token")
+                .build()) {
+            runConcurrently(() -> assertThat(sdk.directBinaryUploadApi()).isNotNull());
+            runConcurrently(() -> assertThat(sdk.assetFolderApi()).isNotNull());
+            runConcurrently(() -> assertThat(sdk.assetMetadataApi()).isNotNull());
+        }
+    }
+
+    private void runConcurrently(Runnable runnable) throws Exception {
+        int threads = 8;
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<?>> futures = new ArrayList<>();
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        try {
+            for (int i = 0; i < threads; i++) {
+                futures.add(executor.submit(() -> {
+                    start.await();
+                    runnable.run();
+                    return null;
+                }));
+            }
+            start.countDown();
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            executor.shutdownNow();
         }
     }
 }

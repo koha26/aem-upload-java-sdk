@@ -31,6 +31,15 @@ class AuthConfigTest {
     }
 
     @Test
+    void accessTokenAuthConfig_equals_shouldHandleSelfNullAndDifferentType() {
+        AccessTokenAuthConfig config = AccessTokenAuthConfig.of("token-123");
+
+        assertThat(config.equals(config)).isTrue();
+        assertThat(config.equals(null)).isFalse();
+        assertThat(config.equals("token-123")).isFalse();
+    }
+
+    @Test
     void accessTokenAuthConfig_shouldRejectBlank() {
         assertThatThrownBy(() -> AccessTokenAuthConfig.of(" "))
                 .isInstanceOf(IllegalArgumentException.class);

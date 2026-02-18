@@ -5,6 +5,7 @@ import com.kdiachenko.aemupload.exception.SdkException;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Constructor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -142,8 +143,31 @@ class AssetApiResponseTest {
     }
 
     @Test
+    void ifSuccess_shouldNotInvokeCallbackOnFailure() {
+        AssetApiResponse<String> failure = AssetApiResponse.fail(SdkError.apiError("error", 500));
+        AtomicBoolean called = new AtomicBoolean(false);
+
+        failure.ifSuccess(v -> called.set(true));
+
+        assertThat(called.get()).isFalse();
+    }
+
+    @Test
     void ifFailure_shouldIgnoreNullError() {
         AssetApiResponse<String> response = AssetApiResponse.success("ok");
+        AtomicBoolean called = new AtomicBoolean(false);
+
+        response.ifFailure(e -> called.set(true));
+
+        assertThat(called.get()).isFalse();
+    }
+
+    @Test
+    void ifFailure_shouldIgnoreFailedResponseWithNullError() throws Exception {
+        Constructor<AssetApiResponse> constructor = AssetApiResponse.class.getDeclaredConstructor(
+                boolean.class, Object.class, SdkError.class);
+        constructor.setAccessible(true);
+        AssetApiResponse<String> response = constructor.newInstance(false, null, null);
         AtomicBoolean called = new AtomicBoolean(false);
 
         response.ifFailure(e -> called.set(true));

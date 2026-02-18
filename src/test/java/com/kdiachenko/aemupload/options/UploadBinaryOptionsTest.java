@@ -3,6 +3,7 @@ package com.kdiachenko.aemupload.options;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -87,6 +88,45 @@ class UploadBinaryOptionsTest {
                 .build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("contentType");
+    }
+
+    @Test
+    void builder_shouldRejectBlankContentType() {
+        Path binary = tempDir.resolve("test.jpg");
+        assertThatThrownBy(() -> UploadBinaryOptions.builder()
+                .binary(binary)
+                .uploadURIs(UPLOAD_URIS)
+                .maxPartSize(2048L)
+                .contentType(" ")
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("contentType");
+    }
+
+    @Test
+    void builder_shouldHandleNullUploadUrisInputAndNullInternalList() throws Exception {
+        Path binary = tempDir.resolve("test.jpg");
+
+        assertThatThrownBy(() -> UploadBinaryOptions.builder()
+                .binary(binary)
+                .uploadURIs(null)
+                .maxPartSize(2048L)
+                .contentType("image/jpeg")
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("uploadURIs");
+
+        UploadBinaryOptions.UploadBinaryOptionsBuilder builder = UploadBinaryOptions.builder()
+                .binary(binary)
+                .maxPartSize(2048L)
+                .contentType("image/jpeg");
+        Field uploadUrisField = builder.getClass().getDeclaredField("uploadURIs");
+        uploadUrisField.setAccessible(true);
+        uploadUrisField.set(builder, null);
+
+        assertThatThrownBy(builder::build)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("uploadURIs");
     }
 
     @Test

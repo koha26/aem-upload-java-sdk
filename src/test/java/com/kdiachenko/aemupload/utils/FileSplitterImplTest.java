@@ -4,13 +4,22 @@ import com.kdiachenko.aemupload.utils.impl.FileSplitterImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.spi.FileSystemProvider;
+import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 class FileSplitterImplTest {
     private final FileSplitterImpl fileSplitter = new FileSplitterImpl();
@@ -49,5 +58,70 @@ class FileSplitterImplTest {
         }
 
         assertThat(totalBytes).isEqualTo(1050);
+    }
+
+    @Test
+    void shouldRejectInvalidChunkSizes(@TempDir Path tempDir) throws IOException {
+        Path inputFile = Files.createFile(tempDir.resolve("test-file.bin"));
+        Files.write(inputFile, new byte[]{1, 2, 3});
+
+        assertThatThrownBy(() -> fileSplitter.splitFile(inputFile, 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("positive");
+
+        assertThatThrownBy(() -> fileSplitter.splitFile(inputFile, 100 * 1024 * 1024L + 1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("exceeds maximum allowed size");
+    }
+
+    @Test
+    void shouldCleanupPartsWhenIOExceptionOccurs() throws Exception {
+        Path inputPath = Mockito.mock(Path.class);
+        String filePrefix = "source-" + System.nanoTime() + ".bin";
+        Path fileName = Path.of(filePrefix);
+        FileSystem fileSystem = Mockito.mock(FileSystem.class);
+        FileSystemProvider fileSystemProvider = Mockito.mock(FileSystemProvider.class);
+        InputStream inputStream = Mockito.mock(InputStream.class);
+
+        Mockito.when(inputPath.getFileSystem()).thenReturn(fileSystem);
+        Mockito.when(fileSystem.provider()).thenReturn(fileSystemProvider);
+        Mockito.when(fileSystemProvider.newInputStream(eq(inputPath))).thenReturn(inputStream);
+        Mockito.when(inputPath.getFileName()).thenReturn(fileName);
+        AtomicInteger readCallCounter = new AtomicInteger(0);
+        Mockito.when(inputStream.read(any(byte[].class))).thenAnswer(invocation -> {
+            if (readCallCounter.getAndIncrement() == 0) {
+                return 2;
+            }
+            Path tempFile;
+            try (var paths = Files.list(Path.of(System.getProperty("java.io.tmpdir")))) {
+                tempFile = paths
+                        .filter(path -> path.getFileName().toString().startsWith(filePrefix + "-part"))
+                        .max(Comparator.comparingLong(path -> path.toFile().lastModified()))
+                        .orElseThrow();
+            }
+            Files.deleteIfExists(tempFile);
+            Files.createDirectories(tempFile);
+            Files.write(tempFile.resolve("nested.txt"), List.of("data"));
+            throw new IOException("read failed");
+        });
+        try {
+            assertThatThrownBy(() -> fileSplitter.splitFile(inputPath, 2))
+                    .isInstanceOf(IOException.class)
+                    .hasMessageContaining("read failed");
+        } finally {
+            try (var paths = Files.list(Path.of(System.getProperty("java.io.tmpdir")))) {
+                paths.filter(path -> path.getFileName().toString().startsWith(filePrefix + "-part"))
+                        .forEach(path -> {
+                            try {
+                                if (Files.isDirectory(path)) {
+                                    Files.deleteIfExists(path.resolve("nested.txt"));
+                                }
+                                Files.deleteIfExists(path);
+                            } catch (IOException ignored) {
+                                // Best-effort cleanup
+                            }
+                        });
+            }
+        }
     }
 }

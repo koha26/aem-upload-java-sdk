@@ -48,8 +48,10 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     @Override
     public <T> ApiHttpResponse<T> get(final String url, final ApiHttpContext apiHttpContext,
                                       final Class<T> responseType) {
-        var request = new HttpGet(url);
-        return executeRequest(request, apiHttpContext, responseType);
+        return safeExecute(() -> {
+            var request = new HttpGet(url);
+            return executeRequest(request, apiHttpContext, responseType);
+        });
     }
 
     @Override

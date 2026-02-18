@@ -26,6 +26,23 @@ class ServerConfigTest {
     }
 
     @Test
+    void builder_shouldRejectBlankSchemaAndHost() {
+        assertThatThrownBy(() -> ServerConfig.builder()
+                .schema(" ")
+                .host("example.com")
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("scheme");
+
+        assertThatThrownBy(() -> ServerConfig.builder()
+                .schema("https")
+                .host(" ")
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("host");
+    }
+
+    @Test
     void fromUrl_shouldThrowOnInvalid() {
         assertThatThrownBy(() -> ServerConfig.fromUrl("://bad"))
                 .isInstanceOf(IllegalArgumentException.class)

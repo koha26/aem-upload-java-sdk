@@ -4,6 +4,7 @@ import com.kdiachenko.aemupload.auth.Clock;
 import com.kdiachenko.aemupload.auth.TokenCache;
 import com.kdiachenko.aemupload.common.ApiAccessTokenConfigurationStub;
 import com.kdiachenko.aemupload.config.ApiAccessTokenConfiguration;
+import com.kdiachenko.aemupload.exception.AuthenticationException;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.internal.auth.InMemoryTokenCache;
 import org.apache.hc.client5.http.classic.methods.HttpPut;
@@ -18,23 +19,26 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.Method;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
@@ -44,8 +48,6 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ServiceCredentialsApiAccessTokenProviderTest {
-
-    public static final String RESOURCES_BASE_PATH = "src/test/resources/com/kdiachenko/aemupload/auth";
 
     private ApiAccessTokenConfigurationStub config;
     @Mock
@@ -59,6 +61,7 @@ class ServiceCredentialsApiAccessTokenProviderTest {
     private TokenCache tokenCache;
     private ServiceCredentialsApiAccessTokenProvider provider;
     private ServiceCredentialsApiAccessTokenProvider.AccessTokenWrapper tokenWrapper;
+    private String validPrivateKeyContent;
 
     @BeforeEach
     void setUp() {
@@ -74,6 +77,7 @@ class ServiceCredentialsApiAccessTokenProviderTest {
         tokenWrapper = new ServiceCredentialsApiAccessTokenProvider.AccessTokenWrapper("abc123", "bearer", 3600);
         clock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
         tokenCache = new InMemoryTokenCache(clock);
+        validPrivateKeyContent = generateRsaPrivateKeyPem();
         provider = new ServiceCredentialsApiAccessTokenProviderTestWrapper(
                 config,
                 httpClient,
@@ -92,27 +96,33 @@ class ServiceCredentialsApiAccessTokenProviderTest {
     }
 
     @Test
-    void getAccessToken_shouldReturnNullWhenPrivateKeyMissing() {
-        assertNull(provider.getAccessToken());
+    void getAccessToken_shouldThrowWhenPrivateKeyMissing() {
+        assertThatThrownBy(() -> provider.getAccessToken())
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessageContaining("Private key not configured");
     }
 
     @Test
-    void getAccessToken_shouldReturnNullWhenPrivateKeyFileIsMissing() {
-        config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/does-not-exist.txt");
+    void getAccessToken_shouldThrowWhenPrivateKeyFileIsMissing() throws IOException {
+        config.setPrivateKeyFilePath(createMissingFilePath().toString());
 
-        assertNull(provider.getAccessToken());
+        assertThatThrownBy(() -> provider.getAccessToken())
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessageContaining("Cannot read private key from file");
     }
 
     @Test
-    void getAccessToken_shouldReturnNullWhenPrivateKeyFileIsInvalid() {
-        config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/test-rsa_wrong-key.txt");
+    void getAccessToken_shouldThrowWhenPrivateKeyFileIsInvalid() throws IOException {
+        config.setPrivateKeyFilePath(createPrivateKeyFile(createInvalidPrivateKeyPem()).toString());
 
-        assertNull(provider.getAccessToken());
+        assertThatThrownBy(() -> provider.getAccessToken())
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessageContaining("Invalid private key format");
     }
 
     @Test
     void getAccessToken_shouldReturnTokenAndCacheIt() throws IOException {
-        config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/test-rsa_valid-key.txt");
+        useValidPrivateKeyContent();
         mockHttpClientResponse(ApiHttpResponse.builder().body(tokenWrapper).status(200).build());
 
         String token = provider.getAccessToken();
@@ -125,9 +135,7 @@ class ServiceCredentialsApiAccessTokenProviderTest {
 
     @Test
     void getAccessToken_shouldUsePrivateKeyContentWhenProvided() throws IOException {
-        Path privateKeyPath = Paths.get(RESOURCES_BASE_PATH + "/test-rsa_valid-key.txt");
-        String privateFileContent = String.join("", Files.readAllLines(privateKeyPath));
-        config.setPrivateKeyContent(privateFileContent);
+        useValidPrivateKeyContent();
         mockHttpClientResponse(ApiHttpResponse.builder().body(tokenWrapper).status(200).build());
 
         assertThat(provider.getAccessToken()).isEqualTo("abc123");
@@ -135,7 +143,7 @@ class ServiceCredentialsApiAccessTokenProviderTest {
 
     @Test
     void getAccessToken_shouldSendCorrectAccessTokenRequest() throws IOException, URISyntaxException {
-        config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/test-rsa_valid-key.txt");
+        useValidPrivateKeyContent();
         mockHttpClientResponse(ApiHttpResponse.builder().body(tokenWrapper).status(200).build());
 
         provider.getAccessToken();
@@ -152,59 +160,109 @@ class ServiceCredentialsApiAccessTokenProviderTest {
     }
 
     @Test
-    void getAccessToken_shouldReturnNullWhenResponseStatusNotOk() throws IOException {
-        config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/test-rsa_valid-key.txt");
+    void getAccessToken_shouldThrowWhenResponseStatusNotOk() throws IOException {
+        useValidPrivateKeyContent();
         mockHttpClientResponse(ApiHttpResponse.builder().status(302).build());
 
-        assertNull(provider.getAccessToken());
+        assertThatThrownBy(() -> provider.getAccessToken())
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessageContaining("Failed to exchange JWT for access token");
     }
 
     @Test
-    void getAccessToken_shouldReturnNullWhenResponseBodyMissing() throws IOException {
-        config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/test-rsa_valid-key.txt");
+    void getAccessToken_shouldThrowWhenResponseBodyMissing() throws IOException {
+        useValidPrivateKeyContent();
         mockHttpClientResponse(ApiHttpResponse.builder().status(200).build());
 
-        assertNull(provider.getAccessToken());
+        assertThatThrownBy(() -> provider.getAccessToken())
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessageContaining("Failed to exchange JWT for access token");
     }
 
     @Test
-    void getAccessToken_shouldReturnNullWhenHttpClientThrowsIOException() throws IOException {
-        config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/test-rsa_valid-key.txt");
+    void getAccessToken_shouldThrowWhenHttpClientThrowsIOException() throws IOException {
+        useValidPrivateKeyContent();
         doThrow(IOException.class).when(httpClient).execute(any(HttpPut.class), any(HttpClientResponseHandler.class));
 
-        assertNull(provider.getAccessToken());
+        assertThatThrownBy(() -> provider.getAccessToken())
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessageContaining("Failed to exchange JWT for access token");
     }
 
     @Test
-    void getAccessToken_shouldReturnNullWhenConfigThrows() {
-        config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/test-rsa_valid-key.txt");
+    void getAccessToken_shouldThrowWhenConfigThrows() {
+        config.setPrivateKeyContent(null);
+        config.setPrivateKeyFilePath("any-path.pem");
         ApiAccessTokenConfiguration badConfig = new ApiAccessTokenConfigurationStub(config) {
             @Override
             public String getPrivateKeyFilePath() {
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("Config error");
             }
         };
         provider = new ServiceCredentialsApiAccessTokenProviderTestWrapper(badConfig);
 
-        assertNull(provider.getAccessToken());
+        assertThatThrownBy(() -> provider.getAccessToken())
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessageContaining("Error while reading private key");
     }
 
     @Test
-    void getAccessToken_shouldReturnNullWhenNoSuchAlgorithm() throws IOException {
-        config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/test-rsa_valid-key.txt");
+    void getAccessToken_shouldThrowWhenNoSuchAlgorithm() throws IOException {
+        useValidPrivateKeyContent();
         mockHttpClientResponse(ApiHttpResponse.builder().body(tokenWrapper).status(200).build());
         provider = new NoSuchAlgorithmProvider(config, httpClient, responseHandler, clock, tokenCache);
 
-        assertNull(provider.getAccessToken());
+        assertThatThrownBy(() -> provider.getAccessToken())
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessageContaining("RSA algorithm not available");
     }
 
     @Test
     void getAccessToken_shouldHandleInvalidImsEndpoint() throws IOException {
         config.setImsEndpoint("not-a-uri");
-        config.setPrivateKeyFilePath(RESOURCES_BASE_PATH + "/test-rsa_valid-key.txt");
+        useValidPrivateKeyContent();
         mockHttpClientResponse(ApiHttpResponse.builder().body(tokenWrapper).status(200).build());
 
         assertThat(provider.getAccessToken()).isEqualTo("abc123");
+    }
+
+    @Test
+    void constructorWithFourArgs_shouldCreateNonOwnedProvider() throws IOException {
+        provider = new ServiceCredentialsApiAccessTokenProvider(config, httpClient, responseHandler, clock);
+
+        provider.close();
+
+        verify(httpClient, never()).close();
+    }
+
+    @Test
+    void close_shouldCloseOwnedHttpClient() throws IOException {
+        provider = new ServiceCredentialsApiAccessTokenProvider(
+                config, httpClient, responseHandler, clock, tokenCache, true);
+
+        provider.close();
+
+        verify(httpClient).close();
+    }
+
+    @Test
+    void close_shouldIgnoreNullHttpClientWhenOwned() {
+        provider = new ServiceCredentialsApiAccessTokenProvider(
+                config, null, responseHandler, clock, tokenCache, true);
+
+        assertThatCode(() -> provider.close()).doesNotThrowAnyException();
+    }
+
+    @Test
+    void getImsHost_shouldHandleNullAndMalformedEndpoint() throws Exception {
+        ServiceCredentialsApiAccessTokenProvider localProvider = new ServiceCredentialsApiAccessTokenProvider(
+                config, httpClient, responseHandler, clock, tokenCache, false);
+
+        config.setImsEndpoint(null);
+        assertThat(invokeGetImsHost(localProvider)).isNull();
+
+        config.setImsEndpoint("http://exa mple.com");
+        assertThat(invokeGetImsHost(localProvider)).isEqualTo("http://exa mple.com");
     }
 
     private void assertAccessTokenInquireRequestBody(HttpPut putRequest) throws IOException {
@@ -228,6 +286,49 @@ class ServiceCredentialsApiAccessTokenProviderTest {
     private void mockHttpClientResponse(ApiHttpResponse<Object> response) throws IOException {
         lenient().when(httpClient.execute(any(HttpPut.class), any(HttpClientResponseHandler.class)))
                 .thenReturn(response);
+    }
+
+    private String invokeGetImsHost(ServiceCredentialsApiAccessTokenProvider target) throws Exception {
+        Method method = ServiceCredentialsApiAccessTokenProvider.class.getDeclaredMethod("getImsHost");
+        method.setAccessible(true);
+        return (String) method.invoke(target);
+    }
+
+    private void useValidPrivateKeyContent() {
+        config.setPrivateKeyContent(validPrivateKeyContent);
+        config.setPrivateKeyFilePath(null);
+    }
+
+    private static Path createMissingFilePath() throws IOException {
+        Path path = Files.createTempFile("rsa-missing-key-", ".pem");
+        Files.deleteIfExists(path);
+        return path;
+    }
+
+    private static Path createPrivateKeyFile(String content) throws IOException {
+        Path path = Files.createTempFile("rsa-key-", ".pem");
+        Files.writeString(path, content, StandardCharsets.US_ASCII);
+        path.toFile().deleteOnExit();
+        return path;
+    }
+
+    private static String generateRsaPrivateKeyPem() {
+        try {
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(2048);
+            byte[] privateKeyBytes = keyPairGenerator.generateKeyPair().getPrivate().getEncoded();
+            String encodedPrivateKey = Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.US_ASCII))
+                    .encodeToString(privateKeyBytes);
+            return "-----BEGIN PRIVATE KEY-----\n"
+                    + encodedPrivateKey
+                    + "\n-----END PRIVATE KEY-----";
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("RSA algorithm is not available in test runtime", e);
+        }
+    }
+
+    private static String createInvalidPrivateKeyPem() {
+        return "-----BEGIN PRIVATE KEY-----\nAQIDBAUGBwgJCg==\n-----END PRIVATE KEY-----";
     }
 
     static class ServiceCredentialsApiAccessTokenProviderTestWrapper extends ServiceCredentialsApiAccessTokenProvider {

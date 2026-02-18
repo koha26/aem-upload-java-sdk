@@ -120,6 +120,18 @@ class ApiHttpClientResponseHandlerTest {
         assertThat(result.getStatus()).isEqualTo(200);
     }
 
+    @Test
+    void handleResponse_shouldReturnStatusOnlyForVoidType() throws IOException {
+        ApiHttpClientResponseHandler<Void> voidHandler = new ApiHttpClientResponseHandler<>(Void.class, serializer);
+        BasicClassicHttpResponse response = new BasicClassicHttpResponse(201);
+        response.setEntity(new StringEntity("{\"ignored\":true}"));
+
+        ApiHttpResponse<Void> result = voidHandler.handleResponse(response);
+
+        assertThat(result.getStatus()).isEqualTo(201);
+        assertThat(result.getBody()).isNull();
+    }
+
     static class TestResponse {
         private String message;
 

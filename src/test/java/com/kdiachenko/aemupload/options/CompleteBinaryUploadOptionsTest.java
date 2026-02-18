@@ -89,6 +89,45 @@ class CompleteBinaryUploadOptionsTest {
     }
 
     @Test
+    void builder_shouldRejectBlankRequiredFields() {
+        assertThatThrownBy(() -> CompleteBinaryUploadOptions.builder()
+                .completeUri(" ")
+                .fileName(FILE_NAME)
+                .mimeType(MIME_TYPE)
+                .uploadToken(UPLOAD_TOKEN)
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("completeUri");
+
+        assertThatThrownBy(() -> CompleteBinaryUploadOptions.builder()
+                .completeUri(COMPLETE_URI)
+                .fileName(" ")
+                .mimeType(MIME_TYPE)
+                .uploadToken(UPLOAD_TOKEN)
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("fileName");
+
+        assertThatThrownBy(() -> CompleteBinaryUploadOptions.builder()
+                .completeUri(COMPLETE_URI)
+                .fileName(FILE_NAME)
+                .mimeType(" ")
+                .uploadToken(UPLOAD_TOKEN)
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("mimeType");
+
+        assertThatThrownBy(() -> CompleteBinaryUploadOptions.builder()
+                .completeUri(COMPLETE_URI)
+                .fileName(FILE_NAME)
+                .mimeType(MIME_TYPE)
+                .uploadToken(" ")
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("uploadToken");
+    }
+
+    @Test
     void toBuilder_shouldAllowModification() {
         // Given
         CompleteBinaryUploadOptions original = CompleteBinaryUploadOptions.builder()

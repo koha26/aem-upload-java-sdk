@@ -3,6 +3,7 @@ package com.kdiachenko.aemupload.internal.auth;
 import com.kdiachenko.aemupload.auth.Clock;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -44,6 +45,21 @@ class InMemoryTokenCacheTest {
 
         cache.put("token", Duration.ofSeconds(10));
         cache.clear();
+
+        assertThat(cache.get()).isEmpty();
+    }
+
+    @Test
+    void get_shouldReturnEmptyWhenTokenExistsButExpirationMissing() throws Exception {
+        InMemoryTokenCache cache = new InMemoryTokenCache(Clock.fixed(Instant.parse("2024-01-01T00:00:00Z")));
+
+        Field tokenField = InMemoryTokenCache.class.getDeclaredField("token");
+        tokenField.setAccessible(true);
+        tokenField.set(cache, "token");
+
+        Field expirationField = InMemoryTokenCache.class.getDeclaredField("expiration");
+        expirationField.setAccessible(true);
+        expirationField.set(cache, null);
 
         assertThat(cache.get()).isEmpty();
     }

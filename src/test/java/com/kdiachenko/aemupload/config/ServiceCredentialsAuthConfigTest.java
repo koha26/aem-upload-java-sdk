@@ -52,6 +52,21 @@ class ServiceCredentialsAuthConfigTest {
     }
 
     @Test
+    void builder_shouldKeepProvidedPositiveTokenLifetime() {
+        ServiceCredentialsAuthConfig config = ServiceCredentialsAuthConfig.builder()
+                .clientId("client")
+                .clientSecret("secret")
+                .technicalAccountId("tech")
+                .orgId("org")
+                .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
+                .tokenLifetimeSeconds(120)
+                .build();
+
+        assertThat(config.getTokenLifeTimeInSec()).isEqualTo(120);
+    }
+
+    @Test
     void builder_shouldAcceptPrivateKeyFilePath() {
         ServiceCredentialsAuthConfig config = ServiceCredentialsAuthConfig.builder()
                 .clientId("client")
@@ -63,5 +78,125 @@ class ServiceCredentialsAuthConfigTest {
                 .build();
 
         assertThat(config.getPrivateKeyFilePath()).isEqualTo("/path/to/key.pem");
+    }
+
+    @Test
+    void authConfigAccessors_shouldReturnApiAccessTokenFields() {
+        ServiceCredentialsAuthConfig config = ServiceCredentialsAuthConfig.builder()
+                .clientId("client")
+                .clientSecret("secret")
+                .technicalAccountId("tech-id")
+                .orgId("org-id")
+                .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
+                .build();
+
+        assertThat(config.getAuthType()).isEqualTo("ServiceCredentials");
+        assertThat(config.getId()).isEqualTo("tech-id");
+        assertThat(config.getOrg()).isEqualTo("org-id");
+        assertThat(config.getLocalDevelopmentAccessToken()).isNull();
+    }
+
+    @Test
+    void builder_shouldRejectBlankRequiredFields() {
+        assertThatThrownBy(() -> ServiceCredentialsAuthConfig.builder()
+                .clientId(null)
+                .clientSecret("secret")
+                .technicalAccountId("tech")
+                .orgId("org")
+                .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("clientId");
+
+        assertThatThrownBy(() -> ServiceCredentialsAuthConfig.builder()
+                .clientId(" ")
+                .clientSecret("secret")
+                .technicalAccountId("tech")
+                .orgId("org")
+                .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("clientId");
+
+        assertThatThrownBy(() -> ServiceCredentialsAuthConfig.builder()
+                .clientId("client")
+                .clientSecret(null)
+                .technicalAccountId("tech")
+                .orgId("org")
+                .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("clientSecret");
+
+        assertThatThrownBy(() -> ServiceCredentialsAuthConfig.builder()
+                .clientId("client")
+                .clientSecret(" ")
+                .technicalAccountId("tech")
+                .orgId("org")
+                .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("clientSecret");
+
+        assertThatThrownBy(() -> ServiceCredentialsAuthConfig.builder()
+                .clientId("client")
+                .clientSecret("secret")
+                .technicalAccountId(null)
+                .orgId("org")
+                .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("technicalAccountId");
+
+        assertThatThrownBy(() -> ServiceCredentialsAuthConfig.builder()
+                .clientId("client")
+                .clientSecret("secret")
+                .technicalAccountId(" ")
+                .orgId("org")
+                .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("technicalAccountId");
+
+        assertThatThrownBy(() -> ServiceCredentialsAuthConfig.builder()
+                .clientId("client")
+                .clientSecret("secret")
+                .technicalAccountId("tech")
+                .orgId(" ")
+                .privateKeyContent("key")
+                .metaScopes(List.of("scope"))
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("orgId");
+
+        assertThatThrownBy(() -> ServiceCredentialsAuthConfig.builder()
+                .clientId("client")
+                .clientSecret("secret")
+                .technicalAccountId("tech")
+                .orgId("org")
+                .privateKeyContent(" ")
+                .privateKeyFilePath(" ")
+                .metaScopes(List.of("scope"))
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("either privateKeyContent or privateKeyFilePath");
+
+        assertThatThrownBy(() -> ServiceCredentialsAuthConfig.builder()
+                .clientId("client")
+                .clientSecret("secret")
+                .technicalAccountId("tech")
+                .orgId("org")
+                .privateKeyContent("key")
+                .metaScopes(null)
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("metaScopes");
     }
 }

@@ -76,6 +76,9 @@ public final class AemUploadSdk implements Closeable {
     private final ApiHttpClientResponseHandlerFactory apiHttpClientResponseHandlerFactory;
     private final boolean ownedHttpClient;
 
+    // Dedicated lock object for thread-safe lazy initialization
+    private final Object initializationApiLock = new Object();
+
     // Lazily initialized API instances
     private volatile DirectBinaryUploadApi directBinaryUploadApi;
     private volatile AssetFolderApi assetFolderApi;
@@ -106,19 +109,22 @@ public final class AemUploadSdk implements Closeable {
      * @return the DirectBinaryUploadApi instance
      */
     public DirectBinaryUploadApi directBinaryUploadApi() {
-        if (directBinaryUploadApi == null) {
-            synchronized (this) {
-                if (directBinaryUploadApi == null) {
-                    directBinaryUploadApi = DirectBinaryUploadApiBuilder.builder(serverConfig)
+        DirectBinaryUploadApi localRef = directBinaryUploadApi;
+        if (localRef == null) {
+            synchronized (initializationApiLock) {
+                localRef = directBinaryUploadApi;
+                if (localRef == null) {
+                    localRef = DirectBinaryUploadApiBuilder.builder(serverConfig)
                             .withHttpClient(httpClient)
                             .withApiHttpClientObjectMapper(apiHttpClientObjectMapper)
                             .withApiHttpClientResponseHandlerFactory(apiHttpClientResponseHandlerFactory)
                             .withFileSplitter(fileSplitter)
                             .build();
+                    directBinaryUploadApi = localRef;
                 }
             }
         }
-        return directBinaryUploadApi;
+        return localRef;
     }
 
     /**
@@ -127,19 +133,22 @@ public final class AemUploadSdk implements Closeable {
      * @return the AssetFolderApi instance
      */
     public AssetFolderApi assetFolderApi() {
-        if (assetFolderApi == null) {
-            synchronized (this) {
-                if (assetFolderApi == null) {
-                    assetFolderApi = AssetFolderApiBuilder.builder(serverConfig)
+        AssetFolderApi localRef = assetFolderApi;
+        if (localRef == null) {
+            synchronized (initializationApiLock) {
+                localRef = assetFolderApi;
+                if (localRef == null) {
+                    localRef = AssetFolderApiBuilder.builder(serverConfig)
                             .withHttpClient(httpClient)
                             .withApiHttpClientObjectMapper(apiHttpClientObjectMapper)
                             .withApiHttpClientResponseHandlerFactory(apiHttpClientResponseHandlerFactory)
                             .withPathNormalizer(pathNormalizer)
                             .build();
+                    assetFolderApi = localRef;
                 }
             }
         }
-        return assetFolderApi;
+        return localRef;
     }
 
     /**
@@ -148,15 +157,18 @@ public final class AemUploadSdk implements Closeable {
      * @return the AssetMetadataApi instance
      */
     public AssetMetadataApi assetMetadataApi() {
-        if (assetMetadataApi == null) {
-            synchronized (this) {
-                if (assetMetadataApi == null) {
-                    assetMetadataApi = AssetMetadataApiBuilder.builder(serverConfig)
+        AssetMetadataApi localRef = assetMetadataApi;
+        if (localRef == null) {
+            synchronized (initializationApiLock) {
+                localRef = assetMetadataApi;
+                if (localRef == null) {
+                    localRef = AssetMetadataApiBuilder.builder(serverConfig)
                             .withHttpClient(httpClient)
                             .withApiHttpClientObjectMapper(apiHttpClientObjectMapper)
                             .withApiHttpClientResponseHandlerFactory(apiHttpClientResponseHandlerFactory)
                             .withPathNormalizer(pathNormalizer)
                             .build();
+                    assetMetadataApi = localRef;
                 }
             }
         }

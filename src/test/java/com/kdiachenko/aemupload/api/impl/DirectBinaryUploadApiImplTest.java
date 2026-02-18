@@ -70,19 +70,10 @@ class DirectBinaryUploadApiImplTest {
     @Mock
     private ApiServerConfiguration apiServerConfiguration;
 
-    @Mock
     private ApiHttpResponse<InitiateUploadResponse> initiateUploadResponse;
-
-    @Mock
     private ApiHttpResponse<Void> uploadPartResponse;
-
-    @Mock
     private ApiHttpResponse<CompleteUploadResponse> completeUploadResponse;
-
-    @Mock
     private InitiateUploadResponse initiateUploadResponseBody;
-
-    @Mock
     private CompleteUploadResponse completeUploadResponseBody;
 
     @Captor
@@ -93,11 +84,24 @@ class DirectBinaryUploadApiImplTest {
     @BeforeEach
     void setUp() {
         when(apiServerConfiguration.getHostUrl()).thenReturn(HOST_URL);
-        when(initiateUploadResponse.isSuccess()).thenReturn(true);
-        when(initiateUploadResponse.getBody()).thenReturn(initiateUploadResponseBody);
-        when(uploadPartResponse.isSuccess()).thenReturn(true);
-        when(completeUploadResponse.isSuccess()).thenReturn(true);
-        when(completeUploadResponse.getBody()).thenReturn(completeUploadResponseBody);
+        initiateUploadResponseBody = InitiateUploadResponse.builder()
+                .completeURI(COMPLETE_URI)
+                .folderPath(DAM_ASSET_FOLDER)
+                .build();
+        completeUploadResponseBody = CompleteUploadResponse.builder()
+                .fileName(FILE_NAME)
+                .filePath(DAM_ASSET_FOLDER + "/" + FILE_NAME)
+                .contentType(CONTENT_TYPE_VALUE)
+                .build();
+        initiateUploadResponse = ApiHttpResponse.<InitiateUploadResponse>builder()
+                .status(200)
+                .body(initiateUploadResponseBody)
+                .build();
+        uploadPartResponse = ApiHttpResponse.<Void>builder().status(200).build();
+        completeUploadResponse = ApiHttpResponse.<CompleteUploadResponse>builder()
+                .status(200)
+                .body(completeUploadResponseBody)
+                .build();
 
         doReturn(initiateUploadResponse)
                 .when(apiHttpClient)
@@ -168,8 +172,13 @@ class DirectBinaryUploadApiImplTest {
                 .fileSize(FILE_SIZE)
                 .build();
 
-        when(initiateUploadResponse.isSuccess()).thenReturn(false);
-        when(initiateUploadResponse.getErrorMessage()).thenReturn("Error message");
+        ApiHttpResponse<InitiateUploadResponse> errorResponse = ApiHttpResponse.<InitiateUploadResponse>builder()
+                .status(500)
+                .errorMessage("Error message")
+                .build();
+        doReturn(errorResponse)
+                .when(apiHttpClient)
+                .post(anyString(), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(InitiateUploadResponse.class));
 
         AssetApiResponse<InitiateUploadResponse> response = directBinaryUploadApi.initiateUpload(options);
 
@@ -227,8 +236,13 @@ class DirectBinaryUploadApiImplTest {
                 .uploadToken(UPLOAD_TOKEN)
                 .build();
 
-        when(completeUploadResponse.isSuccess()).thenReturn(false);
-        when(completeUploadResponse.getErrorMessage()).thenReturn("Error message");
+        ApiHttpResponse<CompleteUploadResponse> errorResponse = ApiHttpResponse.<CompleteUploadResponse>builder()
+                .status(500)
+                .errorMessage("Error message")
+                .build();
+        doReturn(errorResponse)
+                .when(apiHttpClient)
+                .post(anyString(), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(CompleteUploadResponse.class));
 
         AssetApiResponse<CompleteUploadResponse> response = directBinaryUploadApi.completeUpload(options);
 
@@ -306,9 +320,13 @@ class DirectBinaryUploadApiImplTest {
         List<Path> parts = List.of(part1);
         List<URI> uploadURIs = List.of(URI.create("https://example.com/part1"));
 
-        when(uploadPartResponse.isSuccess()).thenReturn(false);
-        when(uploadPartResponse.getStatus()).thenReturn(500);
-        when(uploadPartResponse.getErrorMessage()).thenReturn("Upload failed");
+        uploadPartResponse = ApiHttpResponse.<Void>builder()
+                .status(500)
+                .errorMessage("Upload failed")
+                .build();
+        doReturn(uploadPartResponse)
+                .when(apiHttpClient)
+                .put(anyString(), any(ApiHttpEntity.class), eq(Void.class));
 
         directBinaryUploadApi = new DirectBinaryUploadApiImpl(apiHttpClient, apiServerConfiguration, fileSplitter(parts));
 
@@ -343,6 +361,77 @@ class DirectBinaryUploadApiImplTest {
                 .uploadURIs(List.of())
                 .maxPartSize(512L)
                 .build());
+    }
+
+    @Test
+    @DisplayName("uploadBinary should handle exceptions during upload and cleanup failures")
+    void uploadBinary_shouldHandleUploadExceptionAndCleanupFailure() throws IOException {
+        Path nonEmptyDirectoryPart = tempDir.resolve("part-dir");
+        Files.createDirectories(nonEmptyDirectoryPart);
+        Files.write(nonEmptyDirectoryPart.resolve("nested.txt"), "data".getBytes(StandardCharsets.UTF_8));
+
+        directBinaryUploadApi = new DirectBinaryUploadApiImpl(
+                apiHttpClient, apiServerConfiguration, fileSplitter(List.of(nonEmptyDirectoryPart)));
+
+        UploadBinaryOptions options = UploadBinaryOptions.builder()
+                .binary(tempDir.resolve("test.bin"))
+                .contentType(CONTENT_TYPE_VALUE)
+                .uploadURIs(List.of(URI.create("https://example.com/part1")))
+                .maxPartSize(512L)
+                .build();
+
+        AssetApiResponse<UploadBinaryResponse> response = directBinaryUploadApi.uploadBinary(options);
+
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.getBody().getChunks()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("uploadBinary should handle unexpected upload exception")
+    void uploadBinary_shouldHandleUnexpectedUploadException() throws IOException {
+        Path part1 = createTempPart("part1", "part1 data");
+        directBinaryUploadApi = new DirectBinaryUploadApiImpl(apiHttpClient, apiServerConfiguration, fileSplitter(List.of(part1)));
+
+        doThrow(new RuntimeException("boom"))
+                .when(apiHttpClient)
+                .put(anyString(), any(ApiHttpEntity.class), eq(Void.class));
+
+        UploadBinaryOptions options = UploadBinaryOptions.builder()
+                .binary(tempDir.resolve("test.bin"))
+                .contentType(CONTENT_TYPE_VALUE)
+                .uploadURIs(List.of(URI.create("https://example.com/part1")))
+                .maxPartSize(512L)
+                .build();
+
+        AssetApiResponse<UploadBinaryResponse> response = directBinaryUploadApi.uploadBinary(options);
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("Failed to upload binary");
+    }
+
+    @Test
+    @DisplayName("completeUpload should handle transport exception")
+    void completeUpload_shouldHandleTransportException() {
+        CompleteBinaryUploadOptions options = CompleteBinaryUploadOptions.builder()
+                .completeUri(COMPLETE_URI)
+                .fileName(FILE_NAME)
+                .mimeType(CONTENT_TYPE_VALUE)
+                .uploadToken(UPLOAD_TOKEN)
+                .build();
+        doThrow(new RuntimeException("boom"))
+                .when(apiHttpClient)
+                .post(anyString(), any(ApiHttpEntity.class), eq(HttpContexts.AUTHORIZED), eq(CompleteUploadResponse.class));
+
+        AssetApiResponse<CompleteUploadResponse> response = directBinaryUploadApi.completeUpload(options);
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isPresent()
+                .get()
+                .extracting(SdkError::getMessage)
+                .isEqualTo("Failed to complete upload");
     }
 
     private FileSplitter fileSplitter(List<Path> parts) {

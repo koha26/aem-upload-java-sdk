@@ -1,23 +1,19 @@
 package com.kdiachenko.aemupload.http.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
+import lombok.Builder;
+import lombok.Value;
 
 /**
- * HTTP response wrapper used by the SDK internal HTTP client.
+ * Immutable HTTP response wrapper used by the SDK internal HTTP client.
  *
  * @param <T> deserialized body type
  */
-@Data
-@SuperBuilder
-@NoArgsConstructor
-@AllArgsConstructor
+@Value
+@Builder
 public class ApiHttpResponse<T> {
-    private int status;
-    private T body;
-    private String errorMessage;
+    int status;
+    T body;
+    String errorMessage;
 
     public boolean isSuccess() {
         return status >= 200 && status < 300;

@@ -6,12 +6,11 @@ import com.kdiachenko.aemupload.auth.ApiAccessTokenProvider;
 import com.kdiachenko.aemupload.auth.Clock;
 import com.kdiachenko.aemupload.auth.TokenCache;
 import com.kdiachenko.aemupload.config.ApiAccessTokenConfiguration;
+import com.kdiachenko.aemupload.exception.AuthenticationException;
 import com.kdiachenko.aemupload.http.entity.ApiHttpResponse;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import com.kdiachenko.aemupload.internal.auth.InMemoryTokenCache;
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,6 +25,7 @@ import org.apache.hc.core5.http.NameValuePair;
 import org.apache.hc.core5.http.io.HttpClientResponseHandler;
 import org.apache.hc.core5.http.message.BasicNameValuePair;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -50,13 +50,14 @@ import static org.apache.hc.core5.http.ContentType.APPLICATION_FORM_URLENCODED;
 import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
 
 @Slf4j
-public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenProvider {
+public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenProvider, Closeable {
 
     private final ApiAccessTokenConfiguration apiAccessTokenConfiguration;
     private final CloseableHttpClient httpClient;
     private final HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory;
     private final Clock clock;
     private final TokenCache tokenCache;
+    private final boolean ownedHttpClient;
 
     /**
      * Creates a provider with default HTTP client and system clock.
@@ -69,7 +70,8 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
                 HttpClients.createDefault(),
                 ApiHttpClientResponseHandlerFactory.create().createHandler(AccessTokenWrapper.class),
                 Clock.systemClock(),
-                new InMemoryTokenCache()
+                new InMemoryTokenCache(),
+                true
         );
     }
 
@@ -86,7 +88,7 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             CloseableHttpClient httpClient,
             HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory,
             Clock clock) {
-        this(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, clock, new InMemoryTokenCache(clock));
+        this(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, clock, new InMemoryTokenCache(clock), false);
     }
 
     /**
@@ -104,11 +106,39 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory,
             Clock clock,
             TokenCache tokenCache) {
+        this(apiAccessTokenConfiguration, httpClient, responseHandlerFactory, clock, tokenCache, false);
+    }
+
+    /**
+     * Creates a provider with all dependencies injected.
+     *
+     * @param apiAccessTokenConfiguration the token configuration
+     * @param httpClient                  the HTTP client
+     * @param responseHandlerFactory      the response handler
+     * @param clock                       the clock for time operations
+     * @param tokenCache                  token cache implementation
+     * @param ownedHttpClient             whether this provider owns (and should close) the HTTP client
+     */
+    public ServiceCredentialsApiAccessTokenProvider(
+            ApiAccessTokenConfiguration apiAccessTokenConfiguration,
+            CloseableHttpClient httpClient,
+            HttpClientResponseHandler<ApiHttpResponse<AccessTokenWrapper>> responseHandlerFactory,
+            Clock clock,
+            TokenCache tokenCache,
+            boolean ownedHttpClient) {
         this.apiAccessTokenConfiguration = apiAccessTokenConfiguration;
         this.httpClient = httpClient;
         this.responseHandlerFactory = responseHandlerFactory;
         this.clock = clock;
         this.tokenCache = tokenCache;
+        this.ownedHttpClient = ownedHttpClient;
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (ownedHttpClient && httpClient != null) {
+            httpClient.close();
+        }
     }
 
     @Override
@@ -118,19 +148,13 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
             return cachedToken.get();
         }
         String jwtToken = getJWTToken();
-        if (jwtToken == null) {
-            return null;
-        }
-        AccessTokenWrapper accessToken = getAccessToken(jwtToken);
-        if (accessToken == null) {
-            return null;
-        }
+        AccessTokenWrapper accessToken = exchangeJwtForAccessToken(jwtToken);
         log.info("Access token has been received. Expires in: {}", accessToken.expiresIn);
         tokenCache.put(accessToken.getAccessToken(), Duration.ofSeconds(accessToken.getExpiresIn()));
         return accessToken.getAccessToken();
     }
 
-    private AccessTokenWrapper getAccessToken(final String jwtToken) {
+    private AccessTokenWrapper exchangeJwtForAccessToken(final String jwtToken) {
         try {
             HttpPut httpPut = new HttpPut(apiAccessTokenConfiguration.getImsEndpoint());
             httpPut.addHeader(CONTENT_TYPE, APPLICATION_FORM_URLENCODED.toString());
@@ -141,39 +165,40 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
 
             ApiHttpResponse<AccessTokenWrapper> response = httpClient.execute(httpPut, responseHandlerFactory);
 
-            return response.getStatus() < HttpStatus.SC_REDIRECTION && response.getBody() != null
-                    ? response.getBody()
-                    : null;
+            if (response.getStatus() >= HttpStatus.SC_REDIRECTION || response.getBody() == null) {
+                throw new AuthenticationException("Failed to exchange JWT for access token. Status: "
+                        + response.getStatus() + ", Error: " + response.getErrorMessage());
+            }
+            return response.getBody();
         } catch (IOException e) {
             log.error("Error while getting access token", e);
-            return null;
+            throw new AuthenticationException("Failed to exchange JWT for access token", e);
         }
     }
 
     private String getJWTToken() {
         RSAPrivateKey privateKey = getRsaPrivateKey();
-        if (privateKey == null) {
-            return null;
-        }
 
         return Jwts.builder()
-                .setClaims(createClaims())
-                .signWith(SignatureAlgorithm.RS256, privateKey)
+                .claims(createClaims())
+                .signWith(privateKey, Jwts.SIG.RS256)
                 .compact();
     }
 
-    private Claims createClaims() {
+    private Map<String, Object> createClaims() {
         String imsHost = getImsHost();
         Instant expirationTime = clock.now().plusSeconds(apiAccessTokenConfiguration.getTokenLifeTimeInSec());
-        Claims jwtClaims = Jwts.claims()
-                .setSubject(apiAccessTokenConfiguration.getId())
-                .setIssuer(apiAccessTokenConfiguration.getOrg())
-                .setAudience("https://" + imsHost + "/c/" + apiAccessTokenConfiguration.getClientId())
-                .setExpiration(Date.from(expirationTime));
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", apiAccessTokenConfiguration.getId());
+        claims.put("iss", apiAccessTokenConfiguration.getOrg());
+        claims.put("aud", "https://" + imsHost + "/c/" + apiAccessTokenConfiguration.getClientId());
+        claims.put("exp", Date.from(expirationTime));
+
         apiAccessTokenConfiguration.getMetaScopes().stream()
                 .map(metaScope -> "https://" + imsHost + "/s/" + metaScope)
-                .forEach(value -> jwtClaims.put(value, true));
-        return jwtClaims;
+                .forEach(value -> claims.put(value, true));
+        return claims;
     }
 
     /**
@@ -199,26 +224,30 @@ public class ServiceCredentialsApiAccessTokenProvider implements ApiAccessTokenP
                     ? apiAccessTokenConfiguration.getPrivateKeyContent()
                     : getPrivateKeyContentFromFile();
             if (privateKeyContent == null) {
-                return null;
+                throw new AuthenticationException(
+                        "Private key not configured. Set either privateKeyContent or privateKeyFilePath");
             }
             String privateKeyContentNormalized = privateKeyContent
                     .replaceFirst("-----BEGIN PRIVATE KEY-----", "")
                     .replace("-----END PRIVATE KEY-----", "")
-                    .trim();
+                    .replaceAll("\\s", "");
             byte[] decode = Base64.getDecoder().decode(privateKeyContentNormalized);
-            PKCS8EncodedKeySpec keySpecPv = new PKCS8EncodedKeySpec(decode, "RSA");
+            PKCS8EncodedKeySpec keySpecPv = new PKCS8EncodedKeySpec(decode);
             KeyFactory keyFactory = getKeyFactory();
             return (RSAPrivateKey) keyFactory.generatePrivate(keySpecPv);
+        } catch (AuthenticationException e) {
+            throw e;
         } catch (NoSuchAlgorithmException e) {
-            log.error("No RSA algorithm", e);
+            throw new AuthenticationException("RSA algorithm not available", e);
         } catch (IOException e) {
-            log.error("Can't read private key path {}", apiAccessTokenConfiguration.getPrivateKeyFilePath(), e);
+            throw new AuthenticationException("Cannot read private key from file: "
+                    + apiAccessTokenConfiguration.getPrivateKeyFilePath(), e);
         } catch (InvalidKeySpecException e) {
-            log.error("Invalid key spec {}", apiAccessTokenConfiguration.getPrivateKeyFilePath(), e);
+            throw new AuthenticationException("Invalid private key format: "
+                    + apiAccessTokenConfiguration.getPrivateKeyFilePath(), e);
         } catch (Exception e) {
-            log.error("Error while reading private key", e);
+            throw new AuthenticationException("Error while reading private key", e);
         }
-        return null;
     }
 
     private String getPrivateKeyContentFromFile() throws IOException {

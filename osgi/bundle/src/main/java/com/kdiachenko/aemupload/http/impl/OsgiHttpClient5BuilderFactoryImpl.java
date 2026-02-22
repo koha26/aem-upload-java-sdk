@@ -1,5 +1,7 @@
-package com.kdiachenko.aemupload.http;
+package com.kdiachenko.aemupload.http.impl;
 
+import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
+import com.kdiachenko.aemupload.http.HttpClient5Tracker;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
@@ -29,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Component(
         service = HttpClient5BuilderFactory.class,
-        properties = Constants.SERVICE_RANKING + ":Integer=10"
+        property = { Constants.SERVICE_RANKING + ":Integer=10" }
 )
 @Designate(ocd = OsgiHttpClient5BuilderFactoryImpl.Config.class)
 public class OsgiHttpClient5BuilderFactoryImpl implements HttpClient5BuilderFactory {

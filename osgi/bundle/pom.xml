@@ -121,7 +121,7 @@
                             <bnd><![CDATA[
 Import-Package: !jdk.net,!org.conscrypt,!org.brotli.dec,javax.annotation;version=0.0.0,*;resolution:=optional
 -exportcontents: ${packages;VERSIONED},com.kdiachenko.aemupload.provider,com.kdiachenko.aemupload.options,com.kdiachenko.aemupload.exception,com.kdiachenko.aemupload.api,com.kdiachenko.aemupload.model,com.kdiachenko.aemupload.api,com.kdiachenko.aemupload.http
--includeresource: httpclient5-${httpclient5.version}.jar;lib:=true,httpcore5-${httpcore5.version}.jar;lib:=true,httpcore5-h2-${httpcore5.version}.jar;lib:=true,aem-upload-sdk-1.0.0-SNAPSHOT.jar;lib:=true
+-includeresource: httpclient5-${httpclient5.version}.jar;lib:=true,httpcore5-${httpcore5.version}.jar;lib:=true,httpcore5-h2-${httpcore5.version}.jar;lib:=true,aem-upload-sdk-${aem-upload-sdk.version}.jar;lib:=true
                                 ]]></bnd>
                         </configuration>
                     </execution>
@@ -207,10 +207,23 @@ Import-Package: !jdk.net,!org.conscrypt,!org.brotli.dec,javax.annotation;version
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <version>1.7.36</version>
+            <artifactId>slf4j-api</artifactId>
+            <groupId>org.slf4j</groupId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- AEM Upload SDK -->
         <dependency>
             <groupId>com.kdiachenko</groupId>
             <artifactId>aem-upload-sdk</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 </project>

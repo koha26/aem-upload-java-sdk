@@ -26,7 +26,7 @@ import java.util.List;
  * @author kostiantyn.diachenko
  */
 @Slf4j
-@Component(service = HttpClient5Tracker.class, properties = Constants.SERVICE_RANKING + ":Integer=10")
+@Component(service = HttpClient5Tracker.class, property = {Constants.SERVICE_RANKING + ":Integer=10"})
 public class HttpClient5TrackerImpl implements HttpClient5Tracker {
     private final List<WeakReference<CloseableHttpClient>> trackedHttpClients = new ArrayList<>();
 

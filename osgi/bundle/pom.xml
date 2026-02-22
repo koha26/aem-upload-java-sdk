@@ -120,8 +120,8 @@
                         <configuration>
                             <bnd><![CDATA[
 Import-Package: !jdk.net,!org.conscrypt,!org.brotli.dec,javax.annotation;version=0.0.0,*;resolution:=optional
--exportcontents: ${packages;VERSIONED}
--includeresource: httpclient5-${httpclient5.version}.jar;lib:=true,httpcore5-${httpcore5.version}.jar;lib:=true,httpcore5-h2-${httpcore5.version}.jar;lib:=true
+-exportcontents: ${packages;VERSIONED},com.kdiachenko.aemupload.provider,com.kdiachenko.aemupload.options,com.kdiachenko.aemupload.exception,com.kdiachenko.aemupload.api,com.kdiachenko.aemupload.model,com.kdiachenko.aemupload.api,com.kdiachenko.aemupload.http
+-includeresource: httpclient5-${httpclient5.version}.jar;lib:=true,httpcore5-${httpcore5.version}.jar;lib:=true,httpcore5-h2-${httpcore5.version}.jar;lib:=true,aem-upload-sdk-1.0.0-SNAPSHOT.jar;lib:=true
                                 ]]></bnd>
                         </configuration>
                     </execution>

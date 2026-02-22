@@ -5,19 +5,19 @@ import com.kdiachenko.aemupload.api.AssetFolderApi;
 import com.kdiachenko.aemupload.api.AssetMetadataApi;
 import com.kdiachenko.aemupload.api.DirectBinaryUploadApi;
 import com.kdiachenko.aemupload.config.ServiceCredentialsAuthConfig;
+import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
 import com.kdiachenko.aemupload.provider.AemUploadSdkService;
+import com.kdiachenko.aemupload.provider.AemUploadSdkServiceConfig;
 import com.kdiachenko.aemupload.provider.SdkApiProvider;
+import lombok.extern.slf4j.Slf4j;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
-import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.metatype.annotations.Designate;
-import org.osgi.service.metatype.annotations.ObjectClassDefinition;
-import org.osgi.service.metatype.annotations.Option;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -40,22 +40,28 @@ import java.util.Arrays;
  * @see AemUploadSdkService
  * @see SdkApiProvider
  */
+@Slf4j
 @Component(
         service = {AemUploadSdkService.class, SdkApiProvider.class},
         configurationPolicy = ConfigurationPolicy.REQUIRE,
         immediate = true
 )
-@Designate(ocd = AemUploadSdkServiceImpl.Config.class)
+@Designate(ocd = AemUploadSdkServiceConfig.class)
 public class AemUploadSdkServiceImpl implements AemUploadSdkService, SdkApiProvider {
 
-    private static final Logger log = LoggerFactory.getLogger(AemUploadSdkServiceImpl.class);
-
+    private final HttpClient5BuilderFactory httpClient5BuilderFactory;
     private volatile AemUploadSdk sdk;
     private volatile boolean ready = false;
 
     @Activate
+    public AemUploadSdkServiceImpl(@Reference(cardinality = ReferenceCardinality.OPTIONAL)
+                                   HttpClient5BuilderFactory httpClient5BuilderFactory) {
+        this.httpClient5BuilderFactory = httpClient5BuilderFactory;
+    }
+
+    @Activate
     @Modified
-    protected void activate(Config config) {
+    protected void activate(AemUploadSdkServiceConfig config) {
         log.info("Activating AEM Upload SDK Service with server URL: {}", config.serverUrl());
 
         // Close existing SDK if reconfiguring
@@ -96,8 +102,9 @@ public class AemUploadSdkServiceImpl implements AemUploadSdkService, SdkApiProvi
         }
     }
 
-    private AemUploadSdk buildSdk(Config config) {
+    private AemUploadSdk buildSdk(AemUploadSdkServiceConfig config) {
         var builder = AemUploadSdk.builder()
+                .httpClientBuilderFactory(httpClient5BuilderFactory)
                 .serverUrl(config.serverUrl());
 
         String authType = config.authType();
@@ -125,7 +132,7 @@ public class AemUploadSdkServiceImpl implements AemUploadSdkService, SdkApiProvi
         return builder.build();
     }
 
-    private ServiceCredentialsAuthConfig buildServiceCredentials(Config config) {
+    private ServiceCredentialsAuthConfig buildServiceCredentials(AemUploadSdkServiceConfig config) {
         var builder = ServiceCredentialsAuthConfig.builder()
                 .clientId(config.clientId())
                 .clientSecret(config.clientSecret())
@@ -134,12 +141,9 @@ public class AemUploadSdkServiceImpl implements AemUploadSdkService, SdkApiProvi
 
         // Private key - either content or file path
         String privateKeyContent = config.privateKeyContent();
-        String privateKeyPath = config.privateKeyPath();
 
         if (privateKeyContent != null && !privateKeyContent.isBlank()) {
             builder.privateKeyContent(privateKeyContent);
-        } else if (privateKeyPath != null && !privateKeyPath.isBlank()) {
-            builder.privateKeyFilePath(privateKeyPath);
         } else {
             throw new IllegalStateException("Either privateKeyContent or privateKeyPath is required for service credentials");
         }
@@ -162,8 +166,6 @@ public class AemUploadSdkServiceImpl implements AemUploadSdkService, SdkApiProvi
             throw new IllegalStateException("AEM Upload SDK is not properly configured or not ready");
         }
     }
-
-    // ========== AemUploadSdkService implementation ==========
 
     @Override
     public DirectBinaryUploadApi directBinaryUploadApi() {
@@ -194,8 +196,6 @@ public class AemUploadSdkServiceImpl implements AemUploadSdkService, SdkApiProvi
         return sdk;
     }
 
-    // ========== SdkApiProvider implementation (backward compatibility) ==========
-
     @Override
     public DirectBinaryUploadApi getDirectBinaryUploadApi() {
         return directBinaryUploadApi();
@@ -211,103 +211,4 @@ public class AemUploadSdkServiceImpl implements AemUploadSdkService, SdkApiProvi
         return assetMetadataApi();
     }
 
-    // ========== OSGi Configuration ==========
-
-    @ObjectClassDefinition(
-            name = "AEM Upload SDK Configuration",
-            description = "Configuration for the AEM Upload SDK OSGi service"
-    )
-    public @interface Config {
-
-        @AttributeDefinition(
-                name = "Server URL",
-                description = "The AEM server URL (e.g., https://author.adobeaemcloud.com or http://localhost:4502)"
-        )
-        String serverUrl() default "http://localhost:4502";
-
-        @AttributeDefinition(
-                name = "Authentication Type",
-                description = "The authentication method to use",
-                options = {
-                        @Option(label = "Access Token", value = "accessToken"),
-                        @Option(label = "Basic Auth (username/password)", value = "basic"),
-                        @Option(label = "Service Credentials (JWT)", value = "serviceCredentials")
-                }
-        )
-        String authType() default "basic";
-
-        // ===== Access Token Auth =====
-
-        @AttributeDefinition(
-                name = "Access Token",
-                description = "Static access token (for development). Used when authType = 'accessToken'"
-        )
-        String accessToken() default "";
-
-        // ===== Basic Auth =====
-
-        @AttributeDefinition(
-                name = "Username",
-                description = "Username for basic authentication. Used when authType = 'basic'"
-        )
-        String username() default "admin";
-
-        @AttributeDefinition(
-                name = "Password",
-                description = "Password for basic authentication. Used when authType = 'basic'"
-        )
-        String password() default "admin";
-
-        // ===== Service Credentials (JWT) =====
-
-        @AttributeDefinition(
-                name = "Client ID",
-                description = "Adobe I/O client ID. Used when authType = 'serviceCredentials'"
-        )
-        String clientId() default "";
-
-        @AttributeDefinition(
-                name = "Client Secret",
-                description = "Adobe I/O client secret. Used when authType = 'serviceCredentials'"
-        )
-        String clientSecret() default "";
-
-        @AttributeDefinition(
-                name = "Technical Account ID",
-                description = "Adobe I/O technical account ID. Used when authType = 'serviceCredentials'"
-        )
-        String technicalAccountId() default "";
-
-        @AttributeDefinition(
-                name = "Organization ID",
-                description = "Adobe organization ID (e.g., XXXXX@AdobeOrg). Used when authType = 'serviceCredentials'"
-        )
-        String orgId() default "";
-
-        @AttributeDefinition(
-                name = "Private Key Content",
-                description = "PEM-encoded private key content. Used when authType = 'serviceCredentials'. " +
-                        "Either this or privateKeyPath is required."
-        )
-        String privateKeyContent() default "";
-
-        @AttributeDefinition(
-                name = "Private Key Path",
-                description = "Path to the private key file. Used when authType = 'serviceCredentials'. " +
-                        "Either this or privateKeyContent is required."
-        )
-        String privateKeyPath() default "";
-
-        @AttributeDefinition(
-                name = "Meta Scopes",
-                description = "Adobe I/O meta scopes. Used when authType = 'serviceCredentials'"
-        )
-        String[] metaScopes() default {"ent_aem_cloud_api"};
-
-        @AttributeDefinition(
-                name = "IMS Endpoint",
-                description = "Adobe IMS endpoint. Used when authType = 'serviceCredentials'"
-        )
-        String imsEndpoint() default "https://ims-na1.adobelogin.com/ims/exchange/jwt";
-    }
 }

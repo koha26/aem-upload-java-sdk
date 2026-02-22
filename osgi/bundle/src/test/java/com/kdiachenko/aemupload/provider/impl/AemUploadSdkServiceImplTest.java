@@ -3,6 +3,7 @@ package com.kdiachenko.aemupload.provider.impl;
 import com.kdiachenko.aemupload.api.AssetFolderApi;
 import com.kdiachenko.aemupload.api.AssetMetadataApi;
 import com.kdiachenko.aemupload.api.DirectBinaryUploadApi;
+import com.kdiachenko.aemupload.provider.AemUploadSdkServiceConfig;
 import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
@@ -19,8 +20,8 @@ class AemUploadSdkServiceImplTest {
 
     @Test
     void activate_shouldCreateSdkWithAccessToken() {
-        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl();
-        AemUploadSdkServiceImpl.Config config = baseConfig("accessToken");
+        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl(null);
+        AemUploadSdkServiceConfig config = baseConfig("accessToken");
         when(config.accessToken()).thenReturn("token");
 
         service.activate(config);
@@ -42,8 +43,8 @@ class AemUploadSdkServiceImplTest {
 
     @Test
     void activate_shouldHandleMissingAccessToken() {
-        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl();
-        AemUploadSdkServiceImpl.Config config = baseConfig("accessToken");
+        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl(null);
+        AemUploadSdkServiceConfig config = baseConfig("accessToken");
         when(config.accessToken()).thenReturn(" ");
 
         service.activate(config);
@@ -54,8 +55,8 @@ class AemUploadSdkServiceImplTest {
 
     @Test
     void activate_shouldCreateSdkWithBasicAuth() {
-        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl();
-        AemUploadSdkServiceImpl.Config config = baseConfig("basic");
+        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl(null);
+        AemUploadSdkServiceConfig config = baseConfig("basic");
 
         service.activate(config);
 
@@ -67,10 +68,9 @@ class AemUploadSdkServiceImplTest {
 
     @Test
     void activate_shouldCreateSdkWithServiceCredentials() {
-        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl();
-        AemUploadSdkServiceImpl.Config config = baseConfig("serviceCredentials");
+        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl(null);
+        AemUploadSdkServiceConfig config = baseConfig("serviceCredentials");
         when(config.privateKeyContent()).thenReturn("key");
-        when(config.privateKeyPath()).thenReturn("");
 
         service.activate(config);
 
@@ -82,10 +82,9 @@ class AemUploadSdkServiceImplTest {
 
     @Test
     void activate_shouldHandleMissingServiceCredentialsKey() {
-        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl();
-        AemUploadSdkServiceImpl.Config config = baseConfig("serviceCredentials");
+        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl(null);
+        AemUploadSdkServiceConfig config = baseConfig("serviceCredentials");
         when(config.privateKeyContent()).thenReturn(" ");
-        when(config.privateKeyPath()).thenReturn(" ");
 
         service.activate(config);
 
@@ -94,8 +93,8 @@ class AemUploadSdkServiceImplTest {
 
     @Test
     void activate_shouldHandleUnknownAuthType() {
-        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl();
-        AemUploadSdkServiceImpl.Config config = baseConfig("unknown");
+        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl(null);
+        AemUploadSdkServiceConfig config = baseConfig("unknown");
 
         service.activate(config);
 
@@ -104,8 +103,8 @@ class AemUploadSdkServiceImplTest {
 
     @Test
     void deactivate_shouldResetReady() {
-        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl();
-        AemUploadSdkServiceImpl.Config config = baseConfig("basic");
+        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl(null);
+        AemUploadSdkServiceConfig config = baseConfig("basic");
 
         service.activate(config);
         service.deactivate();
@@ -115,14 +114,14 @@ class AemUploadSdkServiceImplTest {
 
     @Test
     void closeQuietly_shouldHandleIOException() {
-        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl();
+        AemUploadSdkServiceImpl service = new AemUploadSdkServiceImpl(null);
         Closeable closeable = () -> { throw new IOException("boom"); };
 
         service.closeQuietly(closeable);
     }
 
-    private AemUploadSdkServiceImpl.Config baseConfig(String authType) {
-        AemUploadSdkServiceImpl.Config config = mock(AemUploadSdkServiceImpl.Config.class);
+    private AemUploadSdkServiceConfig baseConfig(String authType) {
+        AemUploadSdkServiceConfig config = mock(AemUploadSdkServiceConfig.class);
         when(config.serverUrl()).thenReturn("https://example.com");
         when(config.authType()).thenReturn(authType);
         when(config.accessToken()).thenReturn("token");
@@ -133,7 +132,6 @@ class AemUploadSdkServiceImplTest {
         when(config.technicalAccountId()).thenReturn("tech");
         when(config.orgId()).thenReturn("org");
         when(config.privateKeyContent()).thenReturn("key");
-        when(config.privateKeyPath()).thenReturn("");
         when(config.metaScopes()).thenReturn(new String[]{"scope"});
         when(config.imsEndpoint()).thenReturn("https://ims.example.com");
         return config;

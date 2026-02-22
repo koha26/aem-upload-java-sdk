@@ -32,15 +32,13 @@ import java.util.concurrent.TimeUnit;
         properties = Constants.SERVICE_RANKING + ":Integer=10"
 )
 @Designate(ocd = OsgiHttpClient5BuilderFactoryImpl.Config.class)
-public class OsgiHttpClient5BuilderFactoryImpl extends AbstractHttpClient5BuilderFactoryImpl {
+public class OsgiHttpClient5BuilderFactoryImpl implements HttpClient5BuilderFactory {
 
     private final HttpClient5Tracker httpClient5Tracker;
     private RequestConfig defaultRequestConfig;
 
     @Activate
-    public OsgiHttpClient5BuilderFactoryImpl(@Reference HttpClient5BuilderConfigurator configurator,
-                                             @Reference HttpClient5Tracker httpClient5Tracker) {
-        super(configurator);
+    public OsgiHttpClient5BuilderFactoryImpl(@Reference HttpClient5Tracker httpClient5Tracker) {
         this.httpClient5Tracker = httpClient5Tracker;
     }
 
@@ -53,7 +51,7 @@ public class OsgiHttpClient5BuilderFactoryImpl extends AbstractHttpClient5Builde
     }
 
     @Override
-    protected HttpClientBuilder createBuilder() {
+    public HttpClientBuilder create() {
         return new HttpClientBuilder() {
             @Override
             public CloseableHttpClient build() {

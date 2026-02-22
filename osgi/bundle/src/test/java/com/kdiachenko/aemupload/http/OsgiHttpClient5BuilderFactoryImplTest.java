@@ -20,7 +20,7 @@ class OsgiHttpClient5BuilderFactoryImplTest {
         HttpClient5Tracker tracker = mock(HttpClient5Tracker.class);
         when(configurator.configure(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        OsgiHttpClient5BuilderFactoryImpl factory = new OsgiHttpClient5BuilderFactoryImpl(configurator, tracker);
+        OsgiHttpClient5BuilderFactoryImpl factory = new OsgiHttpClient5BuilderFactoryImpl(tracker);
         OsgiHttpClient5BuilderFactoryImpl.Config config = mock(OsgiHttpClient5BuilderFactoryImpl.Config.class);
         when(config.connectionRequestTimeout()).thenReturn(1234);
         when(config.responseTimeout()).thenReturn(4321);
@@ -35,11 +35,9 @@ class OsgiHttpClient5BuilderFactoryImplTest {
 
     @Test
     void create_shouldApplyConfiguratorAndTrackClient() throws Exception {
-        HttpClient5BuilderConfigurator configurator = mock(HttpClient5BuilderConfigurator.class);
         HttpClient5Tracker tracker = mock(HttpClient5Tracker.class);
-        when(configurator.configure(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        OsgiHttpClient5BuilderFactoryImpl factory = new OsgiHttpClient5BuilderFactoryImpl(configurator, tracker);
+        OsgiHttpClient5BuilderFactoryImpl factory = new OsgiHttpClient5BuilderFactoryImpl(tracker);
         OsgiHttpClient5BuilderFactoryImpl.Config config = mock(OsgiHttpClient5BuilderFactoryImpl.Config.class);
         when(config.connectionRequestTimeout()).thenReturn(1000);
         when(config.responseTimeout()).thenReturn(1000);
@@ -47,7 +45,6 @@ class OsgiHttpClient5BuilderFactoryImplTest {
 
         HttpClientBuilder builder = factory.create();
         assertNotNull(builder);
-        verify(configurator).configure(any());
 
         try (CloseableHttpClient client = builder.build()) {
             verify(tracker).track(client);

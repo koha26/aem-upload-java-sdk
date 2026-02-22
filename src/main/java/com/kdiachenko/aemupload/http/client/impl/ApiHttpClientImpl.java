@@ -30,7 +30,6 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -103,7 +102,7 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     }
 
     private <T> void setRequestEntity(final HttpEntityContainer request,
-                                      final ApiHttpEntity<T> entity) {
+                                      final ApiHttpEntity<T> entity) throws IOException {
         T body = entity.getBody();
         if (body instanceof InputStream) {
             setInputStreamToBody(request, entity, (InputStream) body);
@@ -142,19 +141,19 @@ public class ApiHttpClientImpl implements ApiHttpClient {
     }
 
     private <T> void setInputStreamToBody(final HttpEntityContainer request,
-                                          final ApiHttpEntity<T> entity, InputStream body) {
+                                          final ApiHttpEntity<T> entity, InputStream body) throws IOException {
         Map<String, String> headers = entity.getHeaders();
         String contentTypeHeader = headers != null ? headers.get(HttpHeaders.CONTENT_TYPE) : null;
         ContentType contentType = contentTypeHeader != null
                 ? ContentType.parse(contentTypeHeader)
                 : ContentType.APPLICATION_OCTET_STREAM;
         request.setEntity(EntityBuilder.create()
-                .setStream(body)
+                .setBinary(toByteArray(body))
                 .setContentType(contentType)
                 .build());
     }
 
-    private <R> ApiHttpResponse<R> safeExecute(final Supplier<ApiHttpResponse<R>> request) {
+    private <R> ApiHttpResponse<R> safeExecute(final ApiHttpRequestSupplier<ApiHttpResponse<R>> request) {
         try {
             return request.get();
         } catch (Exception e) {
@@ -170,4 +169,11 @@ public class ApiHttpClientImpl implements ApiHttpClient {
         entity.getHeaders().forEach(httpRequest::setHeader);
     }
 
+    private byte[] toByteArray(final InputStream inputStream) throws IOException {
+        return inputStream.readAllBytes();
+    }
+
+    interface ApiHttpRequestSupplier<T> {
+        T get() throws Exception;
+    }
 }

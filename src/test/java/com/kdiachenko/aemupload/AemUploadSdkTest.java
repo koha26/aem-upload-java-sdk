@@ -14,10 +14,10 @@ import com.kdiachenko.aemupload.http.client.HttpClientObjectMapper;
 import com.kdiachenko.aemupload.http.response.ApiHttpClientResponseHandlerFactory;
 import com.kdiachenko.aemupload.utils.FileSplitter;
 import com.kdiachenko.aemupload.utils.PathNormalizer;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,6 +30,8 @@ import java.util.concurrent.Future;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 class AemUploadSdkTest {
 
@@ -200,7 +202,7 @@ class AemUploadSdkTest {
 
     @Test
     void builder_shouldAllowCustomHttpClientAndNotCloseIt() throws IOException {
-        CloseableHttpClient httpClient = Mockito.mock(CloseableHttpClient.class);
+        CloseableHttpClient httpClient = mock(CloseableHttpClient.class);
         AemUploadSdk sdk = AemUploadSdk.builder()
                 .serverUrl("https://example.com")
                 .withAccessToken("token")
@@ -209,12 +211,12 @@ class AemUploadSdkTest {
 
         sdk.close();
 
-        Mockito.verify(httpClient, Mockito.never()).close();
+        verify(httpClient, Mockito.never()).close();
     }
 
     @Test
     void builder_shouldUseHttpClientBuilderFactoryAndConfigurator() throws IOException {
-        CloseableHttpClient httpClient = Mockito.mock(CloseableHttpClient.class);
+        CloseableHttpClient httpClient = mock(CloseableHttpClient.class);
 
         HttpClient5BuilderFactory factory = () -> new HttpClientBuilder() {
             @Override
@@ -240,14 +242,14 @@ class AemUploadSdkTest {
 
         assertThat(configured[0]).isTrue();
         sdk.close();
-        Mockito.verify(httpClient, Mockito.never()).close();
+        verify(httpClient).close();
     }
 
     @Test
     void builder_shouldAcceptCustomSerializerAndResponseHandlerFactory() throws IOException {
-        CloseableHttpClient httpClient = Mockito.mock(CloseableHttpClient.class);
-        HttpClientObjectMapper mapper = Mockito.mock(HttpClientObjectMapper.class);
-        ApiHttpClientResponseHandlerFactory factory = Mockito.mock(ApiHttpClientResponseHandlerFactory.class);
+        CloseableHttpClient httpClient = mock(CloseableHttpClient.class);
+        HttpClientObjectMapper mapper = mock(HttpClientObjectMapper.class);
+        ApiHttpClientResponseHandlerFactory factory = mock(ApiHttpClientResponseHandlerFactory.class);
 
         try (AemUploadSdk sdk = AemUploadSdk.builder()
                 .serverUrl("https://example.com")
@@ -263,7 +265,7 @@ class AemUploadSdkTest {
 
     @Test
     void builder_shouldAcceptServerConfigAuthConfigAndCustomUtilities() throws IOException {
-        CloseableHttpClient httpClient = Mockito.mock(CloseableHttpClient.class);
+        CloseableHttpClient httpClient = mock(CloseableHttpClient.class);
         FileSplitter customFileSplitter = (path, maxChunkSize) -> List.of(path);
         PathNormalizer customPathNormalizer = path -> path;
 

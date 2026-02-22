@@ -137,7 +137,8 @@ public class DirectBinaryUploadApiImpl implements DirectBinaryUploadApi {
     }
 
     private String decodeUploadBinaryPartUri(final URI uploadUrl) {
-        return URLDecoder.decode(uploadUrl.toString(), StandardCharsets.UTF_8);
+        return uploadUrl.toString();
+        //return URLDecoder.decode(uploadUrl.toString(), StandardCharsets.UTF_8);
     }
 
     private Map<String, String> toCompleteUploadFormData(final CompleteBinaryUploadOptions request) {

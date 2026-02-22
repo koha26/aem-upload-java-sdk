@@ -12,7 +12,8 @@ public class PathNormalizerImpl implements PathNormalizer {
         if (path == null) {
             return null;
         }
-        String normalizedPath = StringUtils.removeStart(path, "/content/dam/");
+        String normalizedPath = "/content/dam".equals(path)
+                ? "/" : StringUtils.removeStart(path, "/content/dam/");
         normalizedPath = StringUtils.removeStart(normalizedPath, "/");
         return "/api/assets/" + normalizedPath;
     }

@@ -169,9 +169,9 @@ class AssetFolderApiImplTest {
     }
 
     @Test
-    @DisplayName("getFolder should validate blank folder")
-    void getFolder_shouldValidateBlankFolder() {
-        AssetApiResponse<AssetElement> response = assetFolderApi.getFolder("  ");
+    @DisplayName("getFolder should validate null folder")
+    void getFolder_shouldValidateNullFolder() {
+        AssetApiResponse<AssetElement> response = assetFolderApi.getFolder(null);
 
         assertThat(response.isSuccess()).isFalse();
         assertThat(response.getError()).isPresent()

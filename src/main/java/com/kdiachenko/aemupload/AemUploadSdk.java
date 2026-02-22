@@ -407,7 +407,7 @@ public final class AemUploadSdk implements Closeable {
             // Create HTTP client with auth if not provided
             if (httpClient == null) {
                 httpClient = createHttpClient();
-                ownedHttpClient = httpClient5BuilderFactory == null;
+                ownedHttpClient = true;
             }
 
             return new AemUploadSdk(this);

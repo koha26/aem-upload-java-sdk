@@ -26,7 +26,7 @@ public class AssetFolderApiImpl implements AssetFolderApi {
 
     @Override
     public AssetApiResponse<AssetElement> getFolder(final String folder) {
-        if (StringUtils.isBlank(folder)) {
+        if (folder == null) {
             return AssetApiResponse.fail(SdkError.apiError("folder must not be null or blank", 400));
         }
         var requestUrl = apiServerConfiguration.getHostUrl() + pathNormalizer.normalize(folder);

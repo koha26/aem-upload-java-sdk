@@ -27,7 +27,7 @@ class PathNormalizerImplTest {
                 Arguments.of("", "/api/assets/"),
                 Arguments.of("/content/dam/myfolder/image.png", "/api/assets/myfolder/image.png"),
                 Arguments.of("/myfolder/image.png", "/api/assets/myfolder/image.png"),
-                Arguments.of("/content/dam", "/api/assets/content/dam"),
+                Arguments.of("/content/dam", "/api/assets/"),
                 Arguments.of("/content/dam/", "/api/assets/"),
                 Arguments.of("/content/dam-extra/path", "/api/assets/content/dam-extra/path")
         );

@@ -5,6 +5,7 @@ import com.kdiachenko.aemupload.api.AssetFolderApi;
 import com.kdiachenko.aemupload.api.AssetMetadataApi;
 import com.kdiachenko.aemupload.api.DirectBinaryUploadApi;
 import com.kdiachenko.aemupload.config.ServiceCredentialsAuthConfig;
+import com.kdiachenko.aemupload.http.HttpClient5BuilderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -14,6 +15,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
+import java.util.Optional;
 import javax.annotation.PreDestroy;
 
 /**
@@ -57,16 +59,22 @@ public class AemUploadSdkAutoConfiguration {
     /**
      * Creates the AEM Upload SDK bean.
      *
+     * @param httpClient5BuilderFactory optional custom HTTP client builder factory bean
      * @return the configured SDK instance
      */
-    @Bean
+    @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "aem.upload", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public AemUploadSdk aemUploadSdk() {
+    public AemUploadSdk aemUploadSdk(Optional<HttpClient5BuilderFactory> httpClient5BuilderFactory) {
         log.info("Initializing AEM Upload SDK for server: {}", properties.getServerUrl());
 
         var builder = AemUploadSdk.builder()
                 .serverUrl(properties.getServerUrl());
+
+        httpClient5BuilderFactory.ifPresent(factory -> {
+            builder.httpClientBuilderFactory(factory);
+            log.debug("Using custom HttpClient5BuilderFactory: {}", factory.getClass().getName());
+        });
 
         switch (properties.getAuthType()) {
             case ACCESS_TOKEN:
